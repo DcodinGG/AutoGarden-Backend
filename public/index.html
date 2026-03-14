@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoGarden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d1209;
+    --bg2:      #131a0e;
+    --bg3:      #1a2414;
+    --border:   #2a3d1e;
+    --green:    #7ec850;
+    --green2:   #4a8c25;
+    --green3:   #c8f09a;
+    --amber:    #d4a847;
+    --red:      #c0504a;
+    --muted:    #4a6035;
+    --text:     #d8e8c8;
+    --text2:    #8aab6a;
+    --mono:     'DM Mono', monospace;
+    --serif:    'Fraunces', serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: .4;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--green3);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--green); font-style: italic; font-weight: 300; }
+
+  #status-bar {
+    display: flex; gap: 20px; font-size: 11px; color: var(--muted);
+  }
+  .status-dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--muted);
+    margin-right: 5px; vertical-align: middle;
+  }
+  .status-dot.ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.warn { background: var(--amber); }
+  .status-dot.err  { background: var(--red); }
+
+  /* ── Layout ── */
+  main {
+    max-width: 1100px; margin: 0 auto;
+    padding: 32px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .card-title {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--green3);
+    letter-spacing: 0.3px;
+  }
+
+  .card-body { padding: 18px; }
+
+  /* ── Plants grid ── */
+  #plants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .plant-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    position: relative;
+    transition: border-color .2s;
+    cursor: pointer;
+  }
+  .plant-card:hover { border-color: var(--green2); }
+  .plant-card.empty {
+    border-style: dashed;
+    opacity: .5;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 80px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .plant-card.empty:hover { opacity: .9; border-color: var(--green2); }
+
+  .plant-id {
+    font-size: 10px; color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .plant-name {
+    font-family: var(--serif);
+    font-size: 17px; font-weight: 700;
+    color: var(--green3);
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .plant-species {
+    color: var(--text2); font-style: italic;
+    font-size: 11px; margin-bottom: 10px;
+  }
+  .plant-moisture {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px;
+  }
+  .moisture-bar {
+    flex: 1; height: 4px; background: var(--bg3);
+    border-radius: 2px; overflow: hidden;
+  }
+  .moisture-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--amber), var(--green));
+    transition: width .5s ease;
+  }
+  .moisture-val { font-size: 11px; color: var(--text2); min-width: 30px; text-align: right; }
+
+  .plant-last-action {
+    margin-top: 8px; font-size: 10px; color: var(--muted);
+  }
+  .watered-badge {
+    display: inline-block; padding: 1px 6px;
+    border-radius: 3px; font-size: 10px;
+    background: rgba(126,200,80,.15); color: var(--green);
+    border: 1px solid rgba(126,200,80,.3);
+    margin-left: 4px;
+  }
+
+  .plant-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+  }
+
+  /* ── Buttons ── */
+  btn, button, .btn {
+    font-family: var(--mono); cursor: pointer;
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px 10px; font-size: 11px;
+    background: var(--bg3); color: var(--text2);
+    transition: all .15s;
+  }
+  button:hover, .btn:hover { border-color: var(--green2); color: var(--green3); }
+  .btn-primary {
+    background: rgba(126,200,80,.12);
+    border-color: var(--green2); color: var(--green3);
+  }
+  .btn-danger { border-color: var(--red); color: var(--red); }
+  .btn-sm { padding: 3px 8px; font-size: 10px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 28px;
+    width: 100%; max-width: 440px;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .modal h2 {
+    font-family: var(--serif); font-size: 20px; font-weight: 300;
+    font-style: italic; color: var(--green3); margin-bottom: 20px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;
+  }
+  .form-group input, .form-group textarea {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 10px; color: var(--text); font-family: var(--mono);
+    font-size: 12px; outline: none;
+    transition: border-color .15s;
+  }
+  .form-group input:focus, .form-group textarea:focus {
+    border-color: var(--green2);
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── History table ── */
+  .history-table {
+    width: 100%; border-collapse: collapse; font-size: 11px;
+  }
+  .history-table th {
+    text-align: left; padding: 6px 10px;
+    color: var(--muted); font-weight: 400;
+    text-transform: uppercase; letter-spacing: .8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+  }
+  .history-table td {
+    padding: 7px 10px; border-bottom: 1px solid rgba(42,61,30,.5);
+    color: var(--text2);
+    max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .history-table tr:hover td { background: var(--bg3); }
+  .history-table td.yes { color: var(--green); }
+  .history-table td.no  { color: var(--muted); }
+  .confidence-high   { color: var(--green); }
+  .confidence-medium { color: var(--amber); }
+  .confidence-low    { color: var(--red);   }
+
+  /* ── Reasoning tooltip ── */
+  .reasoning { cursor: help; border-bottom: 1px dotted var(--muted); }
+  .reasoning:hover::after {
+    content: attr(data-text);
+    position: absolute; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 10px; font-size: 11px; color: var(--text);
+    max-width: 300px; white-space: normal; z-index: 50;
+    margin-top: 4px; line-height: 1.5;
+  }
+
+  /* ── Scrollable history ── */
+  .history-scroll {
+    max-height: 340px; overflow-y: auto;
+  }
+  .history-scroll::-webkit-scrollbar { width: 4px; }
+  .history-scroll::-webkit-scrollbar-track { background: var(--bg); }
+  .history-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Empty / loading states ── */
+  .empty-state {
+    text-align: center; padding: 32px 16px;
+    color: var(--muted); font-size: 12px; line-height: 2;
+  }
+  .loading { animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+
+  /* ── Alert banner ── */
+  .alert {
+    padding: 10px 14px; border-radius: 5px; font-size: 11px;
+    margin-bottom: 12px; border-left: 3px solid;
+  }
+  .alert.info  { background: rgba(126,200,80,.08); border-color: var(--green2); color: var(--text2); }
+  .alert.warn  { background: rgba(212,168,71,.08); border-color: var(--amber);  color: var(--amber); }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; }
+    .full-width { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Auto<span>Garden</span> <span style="font-size:12px;color:var(--muted);font-style:normal">v3.0</span></div>
+  <div id="status-bar">
+    <span><span id="dot-mqtt" class="status-dot"></span>MQTT</span>
+    <span><span id="dot-ai"   class="status-dot"></span>IA</span>
+    <span><span id="dot-wx"   class="status-dot"></span>Tiempo</span>
+    <span id="uptime" style="color:var(--muted)">—</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Plantas -->
+  <div class="card full-width">
+    <div class="card-header">
+      <span class="card-title">Macetas configuradas</span>
+      <button class="btn btn-sm btn-primary" onclick="openAddModal()">+ añadir maceta</button>
+    </div>
+    <div id="plants-grid">
+      <div class="empty-state loading">Cargando plantas…</div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="card full-width">
+    <div class="card-header">
+      <span class="card-title">Historial de decisiones</span>
+      <button class="btn btn-sm" onclick="loadHistory()">↺ actualizar</button>
+    </div>
+    <div class="history-scroll">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Planta</th>
+            <th>Humedad</th>
+            <th>Tiempo ext.</th>
+            <th>Regada</th>
+            <th>Duración</th>
+            <th>Confianza</th>
+            <th>Razonamiento</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="8" class="empty-state loading">Cargando historial…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Modal edición de planta -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Configurar maceta</h2>
+    <div class="alert info">
+      La especie que indiques se usa en el prompt a la IA para
+      que conozca las necesidades hídricas específicas de la planta.
+    </div>
+    <input type="hidden" id="form-id">
+    <div class="form-group">
+      <label>Nº de maceta (debe coincidir con el ID del ESP32)</label>
+      <input type="number" id="form-plant-id" min="1" max="20" placeholder="1">
+    </div>
+    <div class="form-group">
+      <label>Nombre de la planta *</label>
+      <input type="text" id="form-name" placeholder="Ej: Tomate cherry">
+    </div>
+    <div class="form-group">
+      <label>Especie (para la IA)</label>
+      <input type="text" id="form-species" placeholder="Ej: Solanum lycopersicum">
+    </div>
+    <div class="form-group">
+      <label>Notas</label>
+      <textarea id="form-notes" placeholder="Ej: Recién trasplantada, suelo arenoso…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePlant()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── API helpers ───────────────────────────────────────────────────────────────
+const api = {
+  get:    (url)       => fetch(url).then(r => r.json()),
+  put:    (url, data) => fetch(url, { method:'PUT',    headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }).then(r => r.json()),
+  delete: (url)       => fetch(url, { method:'DELETE' }).then(r => r.json()),
+};
+
+// ── Estado ────────────────────────────────────────────────────────────────────
+let plants   = [];
+let history  = [];
+let editingId = null;
+
+// ── Arranque ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadStatus();
+  await loadPlants();
+  await loadHistory();
+  setInterval(loadHistory, 30000); // Refrescar historial cada 30s
+  setInterval(loadStatus,  15000);
+});
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const s = await api.get('/api/status');
+    setDot('dot-mqtt', s.mqtt_configured ? 'ok' : 'warn');
+    setDot('dot-ai',   s.ai_configured   ? 'ok' : 'warn');
+    setDot('dot-wx',   s.weather_configured ? 'ok' : 'warn');
+    document.getElementById('uptime').textContent = `uptime ${formatUptime(s.uptime_s)}`;
+  } catch { setDot('dot-mqtt','err'); }
+}
+
+function setDot(id, state) {
+  const el = document.getElementById(id);
+  el.className = 'status-dot ' + state;
+}
+
+function formatUptime(s) {
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s/60)}m`;
+  return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+}
+
+// ── Plantas ───────────────────────────────────────────────────────────────────
+async function loadPlants() {
+  plants = await api.get('/api/plants');
+  renderPlants();
+}
+
+function renderPlants() {
+  const grid = document.getElementById('plants-grid');
+
+  // Obtener últimas lecturas por planta desde el historial
+  const lastByPlant = {};
+  history.forEach(h => {
+    if (!lastByPlant[h.plant_id]) lastByPlant[h.plant_id] = h;
+  });
+
+  if (plants.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        Sin macetas configuradas.<br>
+        Añade una maceta para empezar.
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = plants.map(p => {
+    const last = lastByPlant[p.id];
+    const moisture = last?.moisture_pct ?? null;
+    const moistureBar = moisture !== null
+      ? `<div class="plant-moisture">
+           <div class="moisture-bar"><div class="moisture-fill" style="width:${moisture}%"></div></div>
+           <span class="moisture-val">${moisture}%</span>
+         </div>`
+      : `<div class="plant-moisture"><span class="moisture-val" style="color:var(--muted)">sin datos</span></div>`;
+
+    const lastAction = last
+      ? `Última lectura: ${formatDate(last.recorded_at)}
+         ${last.watered ? `<span class="watered-badge">regada ${last.water_secs}s</span>` : ''}`
+      : 'Sin lecturas aún';
+
+    return `
+      <div class="plant-card" onclick="openEditModal(${p.id})">
+        <div class="plant-id">Maceta #${p.id}</div>
+        <div class="plant-name">${esc(p.name)}</div>
+        <div class="plant-species">${esc(p.species || '—')}</div>
+        ${moistureBar}
+        <div class="plant-last-action">${lastAction}</div>
+        <div class="plant-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-sm" onclick="openEditModal(${p.id})">editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deletePlantConfirm(${p.id})">eliminar</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Historial ─────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  history = await api.get('/api/history?limit=80');
+  renderHistory();
+  renderPlants(); // Actualiza moisture en las cards
+}
+
+function renderHistory() {
+  const tbody = document.getElementById('history-body');
+  if (!history.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin historial aún. El ESP32 aún no ha enviado datos.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = history.map(h => {
+    let decision = {};
+    try { decision = JSON.parse(h.ai_decision || '{}'); } catch {}
+    const conf = decision.confidence || '—';
+    const confClass = conf === 'high' ? 'confidence-high' : conf === 'medium' ? 'confidence-medium' : 'confidence-low';
+    const reasoning = decision.reasoning || '—';
+
+    return `<tr>
+      <td>${formatDate(h.recorded_at)}</td>
+      <td>${esc(h.plant_name || `#${h.plant_id}`)}</td>
+      <td>${h.moisture_pct}%</td>
+      <td>${h.weather_temp != null ? h.weather_temp + '°C' : '—'} ${h.weather_desc ? `<span style="color:var(--muted)">${esc(h.weather_desc)}</span>` : ''}</td>
+      <td class="${h.watered ? 'yes' : 'no'}">${h.watered ? '✓ sí' : '✗ no'}</td>
+      <td>${h.watered ? h.water_secs + 's' : '—'}</td>
+      <td class="${confClass}">${conf}</td>
+      <td><span class="reasoning" data-text="${esc(reasoning)}" title="${esc(reasoning)}">${truncate(reasoning, 40)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Añadir maceta';
+  document.getElementById('form-plant-id').value = '';
+  document.getElementById('form-plant-id').disabled = false;
+  document.getElementById('form-name').value = '';
+  document.getElementById('form-species').value = '';
+  document.getElementById('form-notes').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('form-plant-id').focus();
+}
+
+function openEditModal(id) {
+  const plant = plants.find(p => p.id === id);
+  if (!plant) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = `Editar maceta #${id}`;
+  document.getElementById('form-plant-id').value    = plant.id;
+  document.getElementById('form-plant-id').disabled = true;
+  document.getElementById('form-name').value        = plant.name;
+  document.getElementById('form-species').value     = plant.species || '';
+  document.getElementById('form-notes').value       = plant.notes || '';
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('form-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+async function savePlant() {
+  const plantId = parseInt(document.getElementById('form-plant-id').value);
+  const name    = document.getElementById('form-name').value.trim();
+  const species = document.getElementById('form-species').value.trim();
+  const notes   = document.getElementById('form-notes').value.trim();
+
+  if (!plantId || plantId < 1) return alert('Indica un número de maceta válido.');
+  if (!name) return alert('El nombre de la planta es obligatorio.');
+
+  await api.put(`/api/plants/${plantId}`, { name, species, notes });
+  closeModal();
+  await loadPlants();
+}
+
+async function deletePlantConfirm(id) {
+  const plant = plants.find(p => p.id === id);
+  if (!confirm(`¿Eliminar "${plant?.name || `maceta #${id}`}"?`)) return;
+  await api.delete(`/api/plants/${id}`);
+  await loadPlants();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function truncate(s, n) {
+  return s && s.length > n ? s.slice(0, n) + '…' : s;
+}
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+  return d.toLocaleString('es-ES', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+</script>
+</body>
+</html>
