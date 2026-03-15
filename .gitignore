@@ -1,0 +1,13 @@
+#Ignore all
+*
+
+#Exceppt:
+!.gitignore
+!env.example
+!ai.js
+!db.js
+!index.js
+!mqtt.js
+!package-lock.json
+!README.ms
+!weather.js 
