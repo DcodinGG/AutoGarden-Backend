@@ -5,9 +5,9 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Gemini 1.5 Flash: fast, cost-efficient, and supports structured JSON
+// Gemini 2.5 Flash: state-of-the-art speed and capability
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash",
   generationConfig: { responseMimeType: "application/json" }
 });
 
