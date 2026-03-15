@@ -63,7 +63,7 @@ app.get('/api/status', (req, res) => {
     uptime_s: Math.floor(process.uptime()),
     version: '3.0.0',
     mqtt_configured: !!process.env.MQTT_HOST,
-    ai_configured:   !!process.env.ANTHROPIC_API_KEY,
+    ai_configured:   !!process.env.GEMINI_API_KEY,
     weather_configured: !!process.env.OPENWEATHER_API_KEY
   });
 });
@@ -88,10 +88,10 @@ app.get('*', (req, res) => {
 
 // ── Startup ───────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🌱 AutoGarden Backend v3.0`);
+  console.log(`\n🌱 AutoGarden Backend v3.0 (Gemini Edition)`);
   console.log(`   Dashboard: http://localhost:${PORT}`);
   console.log(`   API:       http://localhost:${PORT}/api`);
-  console.log(`   AI:        ${process.env.ANTHROPIC_API_KEY ? '✓ configured' : '✗ missing ANTHROPIC_API_KEY'}`);
+  console.log(`   AI:        ${process.env.GEMINI_API_KEY ? '✓ Gemini configured' : '✗ missing GEMINI_API_KEY'}`);
   console.log(`   Weather:   ${process.env.OPENWEATHER_API_KEY ? '✓ configured' : '✗ missing OPENWEATHER_API_KEY'}\n`);
 });
 
