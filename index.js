@@ -62,6 +62,7 @@ app.get('/api/status', (req, res) => {
     ok: true,
     uptime_s: Math.floor(process.uptime()),
     version: '3.0.0',
+    ai_engine: 'Gemini',
     mqtt_configured: !!process.env.MQTT_HOST,
     ai_configured:   !!process.env.GEMINI_API_KEY,
     weather_configured: !!process.env.OPENWEATHER_API_KEY

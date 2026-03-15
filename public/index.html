@@ -201,7 +201,7 @@
     </div>
     <div class="status-group">
       <div class="status-item"><div id="dot-mqtt" class="dot"></div> MQTT</div>
-      <div class="status-item"><div id="dot-ai" class="dot"></div> Claude AI</div>
+      <div class="status-item"><div id="dot-ai" class="dot"></div> <span id="ai-name">AI</span></div>
       <div class="status-item"><div id="dot-wx" class="dot"></div> Weather</div>
       <div class="status-item" id="uptime" style="color: var(--text); opacity: 0.8;">--:--</div>
     </div>
@@ -337,6 +337,7 @@
         setDot('dot-mqtt', s.mqtt_configured);
         setDot('dot-ai',   s.ai_configured);
         setDot('dot-wx',   s.weather_configured);
+        document.getElementById('ai-name').textContent = (s.ai_engine || 'AI') + ' Engine';
         document.getElementById('uptime').innerHTML = `<i data-lucide="clock" style="width:12px; height:12px; vertical-align:middle; margin-right:4px;"></i> ${formatUptime(s.uptime_s)}`;
         lucide.createIcons();
       } catch { setDot('dot-mqtt', false, true); }
