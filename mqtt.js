@@ -1,6 +1,6 @@
-// mqtt.js — Cliente MQTT
-// Se suscribe a los datos del ESP32, invoca la IA
-// y publica comandos de riego de vuelta al ESP32.
+// mqtt.js — MQTT Client
+// Subscribes to ESP32 data, invokes AI,
+// and publishes watering commands back to the ESP32.
 
 const mqtt = require('mqtt');
 const { getWeather }          = require('./weather');
@@ -12,36 +12,42 @@ const MQTT_PORT = parseInt(process.env.MQTT_PORT) || 1883;
 const MQTT_USER = process.env.MQTT_USER     || '';
 const MQTT_PASS = process.env.MQTT_PASSWORD || '';
 
-// Topics (deben coincidir con credentials.h del ESP32)
+// Topics (must match credentials.h in ESP32)
 const TOPIC_SENSORS = 'autogarden/sensors';
 const TOPIC_COMMAND = 'autogarden/command';
 const TOPIC_STATUS  = 'autogarden/status';
 
 let client = null;
 
-// ── Procesar un mensaje de sensores ──────────────────────────────────────────
+// ── Process a sensor message ──────────────────────────────────────────────────
 
 async function processSensorMessage(payload) {
   let data;
   try {
     data = JSON.parse(payload);
   } catch {
-    console.error('[mqtt] Payload inválido:', payload);
+    console.error('[mqtt] Invalid JSON payload:', payload);
     return;
   }
 
-  console.log(`[mqtt] Datos recibidos: ${data.plants?.length} plantas`);
+  // Basic structure validation
+  if (!data || !Array.isArray(data.plants)) {
+    console.warn('[mqtt] Received malformed sensor data (missing plants array):', data);
+    return;
+  }
 
-  // Obtener previsión meteorológica (cacheada 30 min)
+  console.log(`[mqtt] Received data: ${data.plants.length} plants`);
+
+  // Get weather forecast (cached for 30 min)
   const weather = await getWeather();
 
-  // Procesar cada planta en paralelo
+  // Process each plant in parallel
   const decisions = await Promise.all(
     (data.plants || []).map(async (p) => {
       const plant   = getPlant(p.id);
-      const history = getPlantHistory(p.id, 5); // últimos 5 ciclos
+      const history = getPlantHistory(p.id, 5); // last 5 cycles
 
-      console.log(`[mqtt] Consultando IA para planta ${p.id} (${plant?.name || 'sin nombre'}), humedad: ${p.moisture}%`);
+      console.log(`[mqtt] Consulting AI for plant ${p.id} (${plant?.name || 'unnamed'}), moisture: ${p.moisture}%`);
 
       const decision = await getWateringDecision({
         plant,
@@ -52,9 +58,9 @@ async function processSensorMessage(payload) {
         history
       });
 
-      console.log(`[mqtt] Decisión planta ${p.id}: regar=${decision.water}, duración=${decision.duration_secs}s — ${decision.reasoning}`);
+      console.log(`[mqtt] Plant ${p.id} decision: water=${decision.water}, duration=${decision.duration_secs}s — ${decision.reasoning}`);
 
-      // Guardar en historial
+      // Save to history
       logCycle({
         plant_id:    p.id,
         moisture_pct: p.moisture,
@@ -72,7 +78,7 @@ async function processSensorMessage(payload) {
     })
   );
 
-  // Publicar comando al ESP32
+  // Publish command to ESP32
   const command = {
     timestamp: new Date().toISOString(),
     plants: decisions.map(d => ({
@@ -84,12 +90,12 @@ async function processSensorMessage(payload) {
 
   const cmdStr = JSON.stringify(command);
   client.publish(TOPIC_COMMAND, cmdStr, { qos: 1 }, (err) => {
-    if (err) console.error('[mqtt] Error publicando comando:', err.message);
-    else     console.log('[mqtt] Comando publicado:', cmdStr);
+    if (err) console.error('[mqtt] Error publishing command:', err.message);
+    else     console.log('[mqtt] Command published:', cmdStr);
   });
 }
 
-// ── Conexión y suscripciones ──────────────────────────────────────────────────
+// ── Connection and subscriptions ──────────────────────────────────────────────
 
 function connect() {
   const options = {
@@ -101,30 +107,30 @@ function connect() {
     ...(MQTT_USER && { username: MQTT_USER, password: MQTT_PASS })
   };
 
-  console.log(`[mqtt] Conectando a ${MQTT_HOST}:${MQTT_PORT}...`);
+  console.log(`[mqtt] Connecting to ${MQTT_HOST}:${MQTT_PORT}...`);
   client = mqtt.connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, options);
 
   client.on('connect', () => {
-    console.log('[mqtt] Conectado al broker.');
+    console.log('[mqtt] Connected to broker.');
     client.subscribe(TOPIC_SENSORS, { qos: 1 });
     client.subscribe(TOPIC_STATUS,  { qos: 0 });
-    console.log(`[mqtt] Suscrito a: ${TOPIC_SENSORS}, ${TOPIC_STATUS}`);
+    console.log(`[mqtt] Subscribed to: ${TOPIC_SENSORS}, ${TOPIC_STATUS}`);
   });
 
   client.on('message', (topic, message) => {
     const payload = message.toString();
     if (topic === TOPIC_SENSORS) {
       processSensorMessage(payload).catch(err =>
-        console.error('[mqtt] Error procesando sensores:', err.message)
+        console.error('[mqtt] Error processing sensors:', err.message)
       );
     } else if (topic === TOPIC_STATUS) {
-      console.log(`[mqtt] Estado ESP32: ${payload}`);
+      console.log(`[mqtt] ESP32 Status: ${payload}`);
     }
   });
 
   client.on('error',       (err) => console.error('[mqtt] Error:', err.message));
-  client.on('reconnect',   ()    => console.log('[mqtt] Reconectando...'));
-  client.on('offline',     ()    => console.warn('[mqtt] Cliente offline.'));
+  client.on('reconnect',   ()    => console.log('[mqtt] Reconnecting...'));
+  client.on('offline',     ()    => console.warn('[mqtt] Client offline.'));
 
   return client;
 }

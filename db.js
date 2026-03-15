@@ -1,6 +1,6 @@
-// db.js — Base de datos SQLite
-// Guarda la configuración de plantas y el historial
-// de lecturas + decisiones de riego.
+// db.js — SQLite Database
+// Stores plant configuration and history
+// of sensor readings + watering decisions.
 
 const Database = require('better-sqlite3');
 const path = require('path');
@@ -8,22 +8,22 @@ const path = require('path');
 const DB_PATH = process.env.DB_PATH || './autogarden.db';
 const db = new Database(DB_PATH);
 
-// Activar WAL para mejor rendimiento en Raspberry Pi
+// Activate WAL for better performance on Raspberry Pi
 db.pragma('journal_mode = WAL');
 
-// ── Esquema ───────────────────────────────────────────────────────────────────
+// ── Schema ────────────────────────────────────────────────────────────────────
 
 db.exec(`
-  -- Configuración de plantas por maceta
+  -- Plant configuration per pot
   CREATE TABLE IF NOT EXISTS plants (
-    id          INTEGER PRIMARY KEY,   -- coincide con plant_id del ESP32 (1, 2, 3...)
-    name        TEXT    NOT NULL,      -- nombre de la planta, ej: "Tomate cherry"
-    species     TEXT,                  -- especie botánica para que la IA la conozca
-    notes       TEXT,                  -- notas del usuario (ej: "recién trasplantada")
+    id          INTEGER PRIMARY KEY,   -- matches plant_id from ESP32 (1, 2, 3...)
+    name        TEXT    NOT NULL,      -- plant name, e.g., "Cherry Tomato"
+    species     TEXT,                  -- botanical species for AI context
+    notes       TEXT,                  -- user notes (e.g., "recently repotted")
     updated_at  TEXT DEFAULT (datetime('now'))
   );
 
-  -- Historial de cada ciclo del ESP32
+  -- History for each ESP32 cycle
   CREATE TABLE IF NOT EXISTS sensor_log (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     recorded_at   TEXT    DEFAULT (datetime('now')),
@@ -31,16 +31,20 @@ db.exec(`
     moisture_pct  INTEGER NOT NULL,   -- 0–100%
     temperature   REAL,               -- DHT22 °C
     humidity      REAL,               -- DHT22 %
-    weather_desc  TEXT,               -- descripción del tiempo, ej: "lluvia ligera"
-    weather_temp  REAL,               -- temperatura exterior
-    weather_rain  REAL,               -- lluvia prevista (mm)
-    ai_decision   TEXT,               -- JSON con la decisión de la IA
-    watered       INTEGER DEFAULT 0,  -- 1 si se regó
-    water_secs    INTEGER DEFAULT 0   -- segundos de riego ejecutados
+    weather_desc  TEXT,               -- weather description, e.g., "light rain"
+    weather_temp  REAL,               -- outdoor temperature
+    weather_rain  REAL,               -- predicted rain (mm)
+    ai_decision   TEXT,               -- JSON with AI decision
+    watered       INTEGER DEFAULT 0,  -- 1 if watered
+    water_secs    INTEGER DEFAULT 0   -- watering seconds executed
   );
+
+  -- Indexes for faster history queries
+  CREATE INDEX IF NOT EXISTS idx_sensor_log_recorded_at ON sensor_log(recorded_at);
+  CREATE INDEX IF NOT EXISTS idx_sensor_log_plant_id ON sensor_log(plant_id);
 `);
 
-// ── Plantas ───────────────────────────────────────────────────────────────────
+// ── Plants ────────────────────────────────────────────────────────────────────
 
 function getPlants() {
   return db.prepare('SELECT * FROM plants ORDER BY id').all();
@@ -66,7 +70,7 @@ function deletePlant(id) {
   return db.prepare('DELETE FROM plants WHERE id = ?').run(id);
 }
 
-// ── Historial ─────────────────────────────────────────────────────────────────
+// ── History ───────────────────────────────────────────────────────────────────
 
 function logCycle({ plant_id, moisture_pct, temperature, humidity,
                     weather_desc, weather_temp, weather_rain,
@@ -93,7 +97,7 @@ function logCycle({ plant_id, moisture_pct, temperature, humidity,
   });
 }
 
-// Últimas N entradas del historial (todas las plantas)
+// Last N history entries (all plants)
 function getHistory(limit = 50) {
   return db.prepare(`
     SELECT h.*, p.name as plant_name, p.species
@@ -104,7 +108,7 @@ function getHistory(limit = 50) {
   `).all(limit);
 }
 
-// Últimas N entradas de una planta específica
+// Last N entries for a specific plant
 function getPlantHistory(plant_id, limit = 10) {
   return db.prepare(`
     SELECT * FROM sensor_log

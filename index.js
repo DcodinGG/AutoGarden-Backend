@@ -1,6 +1,6 @@
 // index.js — AutoGarden Backend
-// Punto de entrada: arranca Express (dashboard + API REST)
-// y el cliente MQTT que conecta con el ESP32.
+// Entry point: starts Express (dashboard + REST API)
+// and the MQTT client that connects with the ESP32.
 
 require('dotenv').config();
 
@@ -8,6 +8,7 @@ const express = require('express');
 const path    = require('path');
 const { connect: mqttConnect } = require('./mqtt');
 const { getPlants, getPlant, upsertPlant, deletePlant, getHistory } = require('./db');
+const { getWeather, clearWeatherCache } = require('./weather');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -15,47 +16,47 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── API REST ──────────────────────────────────────────────────────────────────
+// ── REST API ──────────────────────────────────────────────────────────────────
 
-// GET /api/plants — lista de plantas configuradas
+// GET /api/plants — list of configured plants
 app.get('/api/plants', (req, res) => {
   res.json(getPlants());
 });
 
-// GET /api/plants/:id — una planta
+// GET /api/plants/:id — single plant
 app.get('/api/plants/:id', (req, res) => {
   const plant = getPlant(parseInt(req.params.id));
-  if (!plant) return res.status(404).json({ error: 'Planta no encontrada' });
+  if (!plant) return res.status(404).json({ error: 'Plant not found' });
   res.json(plant);
 });
 
-// PUT /api/plants/:id — crear o actualizar planta
+// PUT /api/plants/:id — create or update plant
 app.put('/api/plants/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const { name, species, notes } = req.body;
 
   if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'El campo "name" es obligatorio' });
+    return res.status(400).json({ error: 'The "name" field is mandatory' });
   }
 
   upsertPlant({ id, name: name.trim(), species, notes });
   res.json(getPlant(id));
 });
 
-// DELETE /api/plants/:id — eliminar planta
+// DELETE /api/plants/:id — delete plant
 app.delete('/api/plants/:id', (req, res) => {
   const id = parseInt(req.params.id);
   deletePlant(id);
   res.json({ ok: true });
 });
 
-// GET /api/history?limit=50 — historial de riegos
+// GET /api/history?limit=50 — watering history
 app.get('/api/history', (req, res) => {
   const limit = parseInt(req.query.limit) || 50;
   res.json(getHistory(limit));
 });
 
-// GET /api/status — estado del backend
+// GET /api/status — backend status
 app.get('/api/status', (req, res) => {
   res.json({
     ok: true,
@@ -67,18 +68,31 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// GET /api/weather — current weather (cached or fresh)
+app.get('/api/weather', async (req, res) => {
+  const wx = await getWeather();
+  res.json(wx || { error: 'Weather not available' });
+});
+
+// POST /api/weather/refresh — force weather refresh
+app.post('/api/weather/refresh', async (req, res) => {
+  clearWeatherCache();
+  const wx = await getWeather();
+  res.json(wx || { error: 'Weather not available' });
+});
+
 // ── Dashboard (SPA) ───────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ── Arranque ──────────────────────────────────────────────────────────────────
+// ── Startup ───────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n🌱 AutoGarden Backend v3.0`);
   console.log(`   Dashboard: http://localhost:${PORT}`);
   console.log(`   API:       http://localhost:${PORT}/api`);
-  console.log(`   AI:        ${process.env.ANTHROPIC_API_KEY ? '✓ configurada' : '✗ falta ANTHROPIC_API_KEY'}`);
-  console.log(`   Weather:   ${process.env.OPENWEATHER_API_KEY ? '✓ configurada' : '✗ falta OPENWEATHER_API_KEY'}\n`);
+  console.log(`   AI:        ${process.env.ANTHROPIC_API_KEY ? '✓ configured' : '✗ missing ANTHROPIC_API_KEY'}`);
+  console.log(`   Weather:   ${process.env.OPENWEATHER_API_KEY ? '✓ configured' : '✗ missing OPENWEATHER_API_KEY'}\n`);
 });
 
 mqttConnect();

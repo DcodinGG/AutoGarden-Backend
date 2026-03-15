@@ -75,8 +75,23 @@ function quickDecision(moisture, weather) {
       alert: null
     };
   }
- 
+
+  // Peak sun hours check (11:00 to 18:00)
+  // Skip watering during these hours unless moisture is critically low (<25%)
+  const currentHour = new Date().getHours();
+  const isPeakSunHour = currentHour >= 11 && currentHour <= 18;
+  if (isPeakSunHour && moisture >= 25) {
+    return {
+      water: false,
+      duration_secs: 0,
+      confidence: 'high',
+      reasoning: `Peak sun hour (${currentHour}:00). Skipping to avoid evaporation and thermal shock.`,
+      alert: 'Watering window: waiting for evening/morning for better efficiency.'
+    };
+  }
+
   // Heavy rain expected soon — skip watering
+
   const rainSoon = weather?.rain_next24h > 5;
   if (rainSoon && moisture > 40) {
     return {
