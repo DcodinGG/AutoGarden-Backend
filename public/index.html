@@ -351,11 +351,11 @@
     let ambientChart = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
+      initChart();
+      initAmbientChart();
       await loadStatus();
       await loadPlants();
       await loadHistory();
-      initChart();
-      initAmbientChart();
       setInterval(loadHistory, 30000);
       setInterval(loadStatus, 15000);
     });
