@@ -13,17 +13,20 @@
 
   <style>
     :root {
-      --bg: #020617;
-      --card: #0f172a;
-      --card-hover: #1e293b;
-      --border: #334155;
-      --primary: #10b981;
-      --primary-glow: rgba(16, 185, 129, 0.2);
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
+      /* Nature palette: deep forest / moss instead of cold navy-slate */
+      --bg: #0b120d;
+      --card: #131f17;
+      --card-hover: #1b2d20;
+      --border: #2d4032;
+      --primary: #4ade80;             /* fresh leaf green */
+      --primary-glow: rgba(74, 222, 128, 0.18);
+      --text: #f2f7f0;
+      --text-muted: #94a89a;          /* warm sage gray */
       --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #3b82f6;
+      --warning: #f0a742;             /* golden sun / amber */
+      --info: #38bdf8;                /* sky blue — water, rain */
+      --earth: #c98a4b;               /* terracotta / soil */
+      --bloom: #c084fc;               /* soft lavender — flower accent */
       --font-ui: 'Inter', sans-serif;
       --font-heading: 'Fraunces', serif;
     }
@@ -39,19 +42,27 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Subtle background glow */
-    body::before {
+    /* Subtle background glow — two soft blooms, green + warm amber, like
+       dappled light through leaves rather than a flat tech gradient */
+    body::before, body::after {
       content: '';
-      position: fixed; top: -10%; left: -10%;
-      width: 40%; height: 40%;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+      position: fixed;
+      width: 45%; height: 45%;
       pointer-events: none; z-index: -1;
+    }
+    body::before {
+      top: -12%; left: -10%;
+      background: radial-gradient(circle, rgba(74, 222, 128, 0.07) 0%, transparent 70%);
+    }
+    body::after {
+      bottom: -15%; right: -10%;
+      background: radial-gradient(circle, rgba(240, 167, 66, 0.05) 0%, transparent 70%);
     }
 
     /* ── Header ── */
     header {
       backdrop-filter: blur(12px);
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(11, 18, 13, 0.85);
       border-bottom: 1px solid var(--border);
       padding: 1rem 2rem;
       display: flex; align-items: center; justify-content: space-between;
@@ -111,7 +122,7 @@
     .stat-card .stat-icon {
       width: 34px; height: 34px; border-radius: 0.6rem;
       display:flex; align-items:center; justify-content:center;
-      background: rgba(16, 185, 129, 0.12); color: var(--primary);
+      background: rgba(74, 222, 128, 0.15); color: var(--primary);
     }
     .stat-card .stat-icon i { width: 18px; height: 18px; }
     .stat-card .stat-label {
@@ -180,7 +191,7 @@
     }
     .plant-item:hover {
       border-color: var(--primary);
-      background: rgba(16, 185, 129, 0.03);
+      background: rgba(74, 222, 128, 0.05);
       transform: translateY(-2px);
     }
     .plant-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
@@ -189,7 +200,7 @@
     .plant-species { font-size: 0.8rem; color: var(--text-muted); font-style: italic; margin-bottom: 1rem; }
 
     .moisture-viz { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-    .progress-track { flex: 1; height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+    .progress-track { flex: 1; height: 6px; background: #1c2a20; border-radius: 3px; overflow: hidden; }
     .progress-fill { height: 100%; background: var(--primary); transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
     .moisture-pct { font-weight: 700; font-size: 0.9rem; color: var(--primary); min-width: 35px; }
 
@@ -205,7 +216,7 @@
       font-family: var(--font-ui);
     }
     .btn-primary { background: var(--primary); color: #000; }
-    .btn-primary:hover { background: #34d399; transform: scale(1.02); }
+    .btn-primary:hover { background: #7ee8a3; transform: scale(1.02); }
     .btn-outline { background: transparent; border-color: var(--border); color: var(--text); }
     .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
     .btn-danger { color: var(--danger); }
@@ -216,12 +227,12 @@
     .table-container { overflow-x: auto; margin-top: 1rem; }
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
-    td { padding: 1rem; border-bottom: 1px solid rgba(51, 65, 85, 0.5); font-size: 0.85rem; }
+    td { padding: 1rem; border-bottom: 1px solid rgba(45, 64, 50, 0.6); font-size: 0.85rem; }
     tr:hover td { background: rgba(255,255,255,0.01); }
 
     /* ── Modal ── */
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(2, 6, 23, 0.85);
+      position: fixed; inset: 0; background: rgba(6, 12, 8, 0.85);
       backdrop-filter: blur(8px); z-index: 200;
       display: none; align-items: center; justify-content: center;
       padding: 1.5rem;
@@ -238,7 +249,7 @@
     .input-group { margin-bottom: 1.25rem; }
     label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
     input, textarea {
-      width: 100%; background: #020617; border: 1px solid var(--border);
+      width: 100%; background: #0b120d; border: 1px solid var(--border);
       border-radius: 0.5rem; padding: 0.75rem; color: var(--text);
       font-family: var(--font-ui); outline: none; transition: border-color 0.2s;
     }
@@ -541,7 +552,7 @@
             </td>
             <td style="font-size:0.75rem; max-width: 300px; color:var(--text-muted)">${dec.reasoning || '---'}</td>
             <td>
-              <span class="badge" style="background: ${dec.confidence === 'high' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)'}; color: ${dec.confidence === 'high' ? 'var(--primary)' : 'var(--warning)'}">${dec.confidence || '---'}</span>
+              <span class="badge" style="background: ${dec.confidence === 'high' ? 'rgba(74,222,128,0.12)' : 'rgba(240,167,66,0.12)'}; color: ${dec.confidence === 'high' ? 'var(--primary)' : 'var(--warning)'}">${dec.confidence || '---'}</span>
             </td>
           </tr>
         `;
@@ -647,9 +658,9 @@
       return {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
+        plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a89a', font: { family: 'Inter' } } } },
         scales: Object.assign({
-          x: { ticks: { color: '#64748b' }, grid: { display: false } }
+          x: { ticks: { color: '#6b7d70' }, grid: { display: false } }
         }, extraScales),
         elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
       };
@@ -669,7 +680,7 @@
 
     function buildMoistureChartConfig() {
       const labels = [...new Set(history.map(h => formatDateLabel(h.recorded_at)))].reverse();
-      const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+      const colors = ['#4ade80', '#c98a4b', '#f0a742', '#38bdf8', '#c084fc'];
 
       const datasets = plants.map((p, i) => {
         const plantHistory = history.filter(h => h.plant_id === p.id).reverse();
@@ -684,7 +695,7 @@
         type: 'line',
         data: { labels, datasets },
         options: baseChartOptions({
-          y: { min: 0, max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+          y: { min: 0, max: 100, ticks: { color: '#6b7d70' }, grid: { color: 'rgba(45, 64, 50, 0.35)' } }
         })
       };
     }
@@ -706,13 +717,13 @@
         data: {
           labels: points.map(h => formatDateLabel(h.recorded_at)),
           datasets: [
-            { label: 'Temperature (°C)', data: points.map(h => h.temperature), borderColor: '#f59e0b', borderWidth: 2, fill: false, yAxisID: 'y' },
-            { label: 'Humidity (%)',     data: points.map(h => h.humidity),    borderColor: '#3b82f6', borderWidth: 2, fill: false, yAxisID: 'y1' }
+            { label: 'Temperature (°C)', data: points.map(h => h.temperature), borderColor: '#f0a742', borderWidth: 2, fill: false, yAxisID: 'y' },
+            { label: 'Humidity (%)',     data: points.map(h => h.humidity),    borderColor: '#38bdf8', borderWidth: 2, fill: false, yAxisID: 'y1' }
           ]
         },
         options: baseChartOptions({
-          y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
-          y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0, max: 100 }
+          y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { color: 'rgba(45, 64, 50, 0.35)' } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { display: false }, min: 0, max: 100 }
         })
       };
     }
@@ -725,13 +736,13 @@
         data: {
           labels: points.map(w => formatDateLabel(w.recorded_at)),
           datasets: [
-            { label: 'Outdoor Temp (°C)',       data: points.map(w => w.temp),         borderColor: '#f59e0b', borderWidth: 2, fill: false, yAxisID: 'y' },
-            { label: 'Rain forecast 24h (mm)',  data: points.map(w => w.rain_next24h), borderColor: '#3b82f6', borderWidth: 2, fill: false, yAxisID: 'y1' }
+            { label: 'Outdoor Temp (°C)',       data: points.map(w => w.temp),         borderColor: '#f0a742', borderWidth: 2, fill: false, yAxisID: 'y' },
+            { label: 'Rain forecast 24h (mm)',  data: points.map(w => w.rain_next24h), borderColor: '#38bdf8', borderWidth: 2, fill: false, yAxisID: 'y1' }
           ]
         },
         options: baseChartOptions({
-          y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
-          y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0 }
+          y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { color: 'rgba(45, 64, 50, 0.35)' } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { display: false }, min: 0 }
         })
       };
     }
