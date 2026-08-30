@@ -51,6 +51,7 @@ async function getWeather() {
     const data = {
       city:          current.data.name,
       description:   current.data.weather[0].description,
+      icon:          current.data.weather[0].icon, // e.g. "10d" — see https://openweathermap.org/weather-conditions
       temp:          current.data.main.temp,
       feels_like:    current.data.main.feels_like,
       humidity:      current.data.main.humidity,

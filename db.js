@@ -42,6 +42,24 @@ db.exec(`
   -- Indexes for faster history queries
   CREATE INDEX IF NOT EXISTS idx_sensor_log_recorded_at ON sensor_log(recorded_at);
   CREATE INDEX IF NOT EXISTS idx_sensor_log_plant_id ON sensor_log(plant_id);
+
+  -- Independent weather history — logged on its own schedule (not tied to
+  -- ESP32 cycles), so the trend is smooth even if plants sleep for hours.
+  CREATE TABLE IF NOT EXISTS weather_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    recorded_at   TEXT    DEFAULT (datetime('now')),
+    city          TEXT,
+    description   TEXT,
+    icon          TEXT,               -- OpenWeatherMap icon code, e.g. "10d"
+    temp          REAL,
+    feels_like    REAL,
+    humidity      REAL,
+    wind_speed    REAL,
+    rain_now      REAL,
+    rain_next24h  REAL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_weather_log_recorded_at ON weather_log(recorded_at);
 `);
 
 // ── Plants ────────────────────────────────────────────────────────────────────
@@ -118,4 +136,37 @@ function getPlantHistory(plant_id, limit = 10) {
   `).all(plant_id, limit);
 }
 
-module.exports = { getPlants, getPlant, upsertPlant, deletePlant, logCycle, getHistory, getPlantHistory };
+// ── Weather history ──────────────────────────────────────────────────────────
+
+function logWeatherSnapshot({ city, description, icon, temp, feels_like,
+                               humidity, wind_speed, rain_now, rain_next24h }) {
+  return db.prepare(`
+    INSERT INTO weather_log
+      (city, description, icon, temp, feels_like, humidity, wind_speed, rain_now, rain_next24h)
+    VALUES
+      (@city, @description, @icon, @temp, @feels_like, @humidity, @wind_speed, @rain_now, @rain_next24h)
+  `).run({
+    city: city || '',
+    description: description || '',
+    icon: icon || '',
+    temp: temp ?? null,
+    feels_like: feels_like ?? null,
+    humidity: humidity ?? null,
+    wind_speed: wind_speed ?? null,
+    rain_now: rain_now || 0,
+    rain_next24h: rain_next24h || 0
+  });
+}
+
+function getWeatherHistory(limit = 100) {
+  return db.prepare(`
+    SELECT * FROM weather_log
+    ORDER BY recorded_at DESC
+    LIMIT ?
+  `).all(limit);
+}
+
+module.exports = {
+  getPlants, getPlant, upsertPlant, deletePlant, logCycle, getHistory, getPlantHistory,
+  logWeatherSnapshot, getWeatherHistory
+};

@@ -225,18 +225,40 @@
         </button>
       </div>
       <div id="weather-info" style="display:flex; flex-direction:column; gap:1rem;">
-        <div style="font-size: 2rem; font-weight: 700; font-family: var(--font-heading);" id="wx-temp">--°C</div>
-        <div id="wx-desc" style="color: var(--text-muted); text-transform: capitalize;">--</div>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <img id="wx-icon" src="" alt="" style="width:56px; height:56px; display:none;">
+          <div>
+            <div style="font-size: 2rem; font-weight: 700; font-family: var(--font-heading); line-height:1;" id="wx-temp">--°C</div>
+            <div id="wx-desc" style="color: var(--text-muted); text-transform: capitalize; font-size:0.85rem;">--</div>
+          </div>
+        </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
           <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">RAIN 24H</div>
-            <div id="wx-rain">-- mm</div>
+            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">FEELS LIKE</div>
+            <div id="wx-feels">--°C</div>
           </div>
           <div>
             <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">HUMIDITY</div>
             <div id="wx-hum">--%</div>
           </div>
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">RAIN 24H</div>
+            <div id="wx-rain">-- mm</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">WIND</div>
+            <div id="wx-wind">-- m/s</div>
+          </div>
         </div>
+        <div id="wx-updated" style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">--</div>
+      </div>
+    </div>
+
+    <!-- Weather Trends (historial independiente, cada 30 min) -->
+    <div class="card col-span-12">
+      <div class="card-title"><i data-lucide="cloud-rain"></i> Weather Trends</div>
+      <div class="chart-container">
+        <canvas id="weatherChart"></canvas>
       </div>
     </div>
 
@@ -347,17 +369,22 @@
 
     let plants = [];
     let history = [];
+    let weatherHistory = [];
     let chart = null;
     let ambientChart = null;
+    let weatherChart = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
       initChart();
       initAmbientChart();
+      initWeatherChart();
       await loadStatus();
       await loadPlants();
       await loadHistory();
+      await loadWeatherHistory();
       setInterval(loadHistory, 30000);
       setInterval(loadStatus, 15000);
+      setInterval(loadWeatherHistory, 60000);
     });
 
     async function loadStatus() {
@@ -437,9 +464,14 @@
       renderHistory();
       renderPlants();
       updateChart();
-      updateWeather();
       updateAmbientNow();
       updateAmbientChart();
+    }
+
+    async function loadWeatherHistory() {
+      weatherHistory = await api.get('/api/weather/history?limit=100');
+      await updateWeather();
+      updateWeatherChart();
     }
 
     function renderHistory() {
@@ -469,10 +501,24 @@
       try {
         const wx = await api.get('/api/weather');
         if (wx.error) return;
-        document.getElementById('wx-temp').textContent = wx.temp + '°C';
-        document.getElementById('wx-desc').textContent = wx.description;
-        document.getElementById('wx-rain').textContent = wx.rain_next24h + ' mm';
-        document.getElementById('wx-hum').textContent = (wx.humidity || '--') + '%';
+        document.getElementById('wx-temp').textContent  = wx.temp + '°C';
+        document.getElementById('wx-desc').textContent  = wx.description;
+        document.getElementById('wx-rain').textContent  = wx.rain_next24h + ' mm';
+        document.getElementById('wx-hum').textContent   = (wx.humidity ?? '--') + '%';
+        document.getElementById('wx-feels').textContent = (wx.feels_like ?? '--') + '°C';
+        document.getElementById('wx-wind').textContent  = (wx.wind_speed ?? '--') + ' m/s';
+        document.getElementById('wx-updated').textContent = wx.fetched_at
+          ? 'Updated ' + formatDateShort(wx.fetched_at)
+          : '';
+
+        const iconEl = document.getElementById('wx-icon');
+        if (wx.icon) {
+          iconEl.src = `https://openweathermap.org/img/wn/${wx.icon}@2x.png`;
+          iconEl.alt = wx.description || '';
+          iconEl.style.display = 'block';
+        } else {
+          iconEl.style.display = 'none';
+        }
       } catch (err) { console.error('Weather update failed', err); }
     }
 
@@ -481,10 +527,60 @@
       btn.style.animation = 'spin 1s linear infinite';
       try {
         await fetch('/api/weather/refresh', { method: 'POST' });
-        await updateWeather();
+        await loadWeatherHistory();
       } finally {
         btn.style.animation = '';
       }
+    }
+
+    // ── Weather Trends chart (histórico independiente, cada 30 min) ────────
+
+    function initWeatherChart() {
+      const ctx = document.getElementById('weatherChart').getContext('2d');
+      weatherChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
+          scales: {
+            x:  { ticks: { color: '#64748b' }, grid: { display: false } },
+            y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+            y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0 }
+          },
+          elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
+        }
+      });
+    }
+
+    function updateWeatherChart() {
+      if (!weatherChart) return;
+
+      // weatherHistory comes DESC (most recent first) — reverse for the chart
+      const points = [...weatherHistory].reverse();
+      const labels = points.map(w => formatDateLabel(w.recorded_at));
+
+      weatherChart.data.labels = labels;
+      weatherChart.data.datasets = [
+        {
+          label: 'Outdoor Temp (°C)',
+          data: points.map(w => w.temp),
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          fill: false,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Rain forecast 24h (mm)',
+          data: points.map(w => w.rain_next24h),
+          borderColor: '#3b82f6',
+          borderWidth: 2,
+          fill: false,
+          yAxisID: 'y1'
+        }
+      ];
+      weatherChart.update('none');
     }
 
     // ── Ambient sensor (DHT22) ──────────────────────────────────────────

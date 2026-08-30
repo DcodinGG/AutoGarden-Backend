@@ -7,8 +7,11 @@ require('dotenv').config();
 const express = require('express');
 const path    = require('path');
 const { connect: mqttConnect } = require('./mqtt');
-const { getPlants, getPlant, upsertPlant, deletePlant, getHistory } = require('./db');
+const { getPlants, getPlant, upsertPlant, deletePlant, getHistory,
+        logWeatherSnapshot, getWeatherHistory } = require('./db');
 const { getWeather, clearWeatherCache } = require('./weather');
+
+const WEATHER_LOG_INTERVAL_MS = 30 * 60 * 1000; // matches weather.js cache TTL
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -79,13 +82,37 @@ app.get('/api/weather', async (req, res) => {
 app.post('/api/weather/refresh', async (req, res) => {
   clearWeatherCache();
   const wx = await getWeather();
+  if (wx) logWeatherSnapshot(wx);
   res.json(wx || { error: 'Weather not available' });
+});
+
+// GET /api/weather/history?limit=100 — weather trend over time
+// Logged independently of ESP32 cycles (see logWeatherPeriodically below),
+// so it stays smooth even if the sensor node is asleep for hours.
+app.get('/api/weather/history', (req, res) => {
+  const limit = parseInt(req.query.limit) || 100;
+  res.json(getWeatherHistory(limit));
 });
 
 // ── Dashboard (SPA) ───────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// ── Weather history logger ───────────────────────────────────────────────────
+// Runs on its own schedule (independent of ESP32 sensor cycles) so the
+// weather trend chart stays smooth even during long deep-sleep windows.
+async function logWeatherPeriodically() {
+  try {
+    const wx = await getWeather();
+    if (wx) {
+      logWeatherSnapshot(wx);
+      console.log(`[weather] Logged snapshot: ${wx.city} ${wx.temp}°C, ${wx.description}`);
+    }
+  } catch (err) {
+    console.error('[weather] Failed to log periodic snapshot:', err.message);
+  }
+}
 
 // ── Startup ───────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
@@ -97,3 +124,7 @@ app.listen(PORT, () => {
 });
 
 mqttConnect();
+
+// Log an initial snapshot on startup, then every WEATHER_LOG_INTERVAL_MS
+logWeatherPeriodically();
+setInterval(logWeatherPeriodically, WEATHER_LOG_INTERVAL_MS);
