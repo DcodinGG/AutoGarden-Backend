@@ -524,7 +524,8 @@
             y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
             y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0, max: 100 }
           },
-          elements: { line: { tension: 0.4 }, point: { radius: 0 } }
+          // radius > 0 para que un único punto de datos sea visible
+          elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
         }
       });
     }
@@ -623,7 +624,9 @@
             x: { ticks: { color: '#64748b' }, grid: { display: false } },
             y: { min: 0, max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
           },
-          elements: { line: { tension: 0.4 }, point: { radius: 0 } }
+          // radius > 0 para que un único punto de datos (ej. recién instalado)
+          // sea visible aunque todavía no haya suficientes puntos para una línea
+          elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
         }
       });
     }
