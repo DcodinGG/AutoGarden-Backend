@@ -106,10 +106,7 @@
     .col-span-8 { grid-column: span 8; }
     .col-span-4 { grid-column: span 4; }
 
-    /* ── Overview stat strip ── */
-    .stat-strip {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
-    }
+    /* ── Overview stat card (Ambient) ── */
     .stat-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -135,13 +132,16 @@
     }
     .stat-card .stat-value img { width: 30px; height: 30px; }
     .stat-card .stat-sub { font-size: 0.75rem; color: var(--text-muted); }
-    .stat-card .stat-refresh {
-      position: absolute; top: 0.9rem; right: 0.9rem;
-      background: transparent; border: none; color: var(--text-muted);
-      cursor: pointer; padding: 0.2rem; border-radius: 0.3rem; transition: color 0.2s;
+
+    /* ── Weather detail grid ── */
+    .weather-detail-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
     }
-    .stat-card .stat-refresh:hover { color: var(--primary); }
-    .stat-card .stat-refresh i { width: 14px; height: 14px; }
+    .wx-stat { display:flex; align-items:center; gap:0.6rem; }
+    .wx-stat i { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+    .wx-stat-label { font-size: 0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; color: var(--text-muted); }
+    .wx-stat-value { font-size: 0.9rem; font-weight: 600; }
 
     /* ── Components ── */
     .card {
@@ -260,11 +260,10 @@
 
     @media (max-width: 1024px) {
       .col-span-8, .col-span-4 { grid-column: span 12; }
-      .stat-strip { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 560px) {
-      .stat-strip { grid-template-columns: 1fr; }
       main { padding: 1rem; }
+      .weather-detail-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -285,18 +284,10 @@
 
   <main>
 
-    <!-- ── Overview: at-a-glance stat strip ─────────────────────────── -->
-    <div class="stat-strip">
-      <div class="stat-card">
-        <div class="stat-icon-row">
-          <div class="stat-icon"><i data-lucide="droplets"></i></div>
-        </div>
-        <div class="stat-label">Soil Moisture</div>
-        <div class="stat-value" id="stat-moisture">--%</div>
-        <div class="stat-sub" id="stat-moisture-sub">No data yet</div>
-      </div>
-
-      <div class="stat-card">
+    <!-- ── Overview: Ambient + full Weather detail ──────────────────── -->
+    <div class="grid-12">
+      <!-- Ambient (DHT22) — compact -->
+      <div class="stat-card col-span-4">
         <div class="stat-icon-row">
           <div class="stat-icon"><i data-lucide="thermometer"></i></div>
         </div>
@@ -305,28 +296,72 @@
         <div class="stat-sub" id="stat-indoor-sub">No data yet</div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon-row">
-          <div class="stat-icon"><i data-lucide="cloud-sun"></i></div>
-          <button class="stat-refresh" id="btn-refresh-wx" onclick="refreshWeather()" title="Refresh weather">
+      <!-- Weather — full detail -->
+      <div class="card col-span-8" id="weather-card">
+        <div class="card-header-row" style="margin-bottom:1rem;">
+          <div class="card-title"><i data-lucide="cloud-sun"></i> Local Weather</div>
+          <button class="btn btn-outline btn-sm" id="btn-refresh-wx" onclick="refreshWeather()" title="Refresh weather">
             <i data-lucide="refresh-cw"></i>
           </button>
         </div>
-        <div class="stat-label">Outdoor Weather</div>
-        <div class="stat-value">
-          <img id="wx-icon" src="" alt="" style="display:none;">
-          <span id="stat-outdoor">--°C</span>
-        </div>
-        <div class="stat-sub" id="stat-outdoor-sub">--</div>
-      </div>
 
-      <div class="stat-card">
-        <div class="stat-icon-row">
-          <div class="stat-icon"><i data-lucide="brain-circuit"></i></div>
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+          <img id="wx-icon" src="" alt="" style="width:64px; height:64px; display:none;">
+          <div>
+            <div style="font-family: var(--font-heading); font-size:2.25rem; font-weight:700; line-height:1;" id="wx-temp">--°C</div>
+            <div id="wx-desc" style="color: var(--text-muted); text-transform: capitalize;">--</div>
+          </div>
+          <div style="margin-left:auto; text-align:right; color:var(--text-muted); font-size:0.8rem;" id="wx-city">--</div>
         </div>
-        <div class="stat-label">Last AI Decision</div>
-        <div class="stat-value" id="stat-decision" style="font-size:1.2rem;">--</div>
-        <div class="stat-sub" id="stat-decision-sub">No data yet</div>
+
+        <div class="weather-detail-grid">
+          <div class="wx-stat">
+            <i data-lucide="thermometer-sun"></i>
+            <div><div class="wx-stat-label">Feels like</div><div class="wx-stat-value" id="wx-feels">--°C</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="arrow-up-narrow-wide"></i>
+            <div><div class="wx-stat-label">Min / Max</div><div class="wx-stat-value" id="wx-minmax">-- / --°C</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="droplets"></i>
+            <div><div class="wx-stat-label">Humidity</div><div class="wx-stat-value" id="wx-hum">--%</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="wind"></i>
+            <div><div class="wx-stat-label">Wind</div><div class="wx-stat-value" id="wx-wind">--</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="gauge"></i>
+            <div><div class="wx-stat-label">Pressure</div><div class="wx-stat-value" id="wx-pressure">-- hPa</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="eye"></i>
+            <div><div class="wx-stat-label">Visibility</div><div class="wx-stat-value" id="wx-visibility">-- km</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="cloud"></i>
+            <div><div class="wx-stat-label">Cloud cover</div><div class="wx-stat-value" id="wx-clouds">--%</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="sun"></i>
+            <div><div class="wx-stat-label">UV Index</div><div class="wx-stat-value" id="wx-uv">--</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="cloud-rain"></i>
+            <div><div class="wx-stat-label">Rain 24h</div><div class="wx-stat-value" id="wx-rain">-- mm</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="sunrise"></i>
+            <div><div class="wx-stat-label">Sunrise</div><div class="wx-stat-value" id="wx-sunrise">--:--</div></div>
+          </div>
+          <div class="wx-stat">
+            <i data-lucide="sunset"></i>
+            <div><div class="wx-stat-label">Sunset</div><div class="wx-stat-value" id="wx-sunset">--:--</div></div>
+          </div>
+        </div>
+
+        <div id="wx-updated" style="font-size:0.7rem; color:var(--text-muted); margin-top:1.25rem;">--</div>
       </div>
     </div>
 
@@ -573,6 +608,18 @@
       if (activeTrend === 'weather') renderTrendsChart();
     }
 
+    // 16-point compass rose, e.g. 0°=N, 90°=E, 180°=S, 270°=W
+    const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    function windDirection(deg) {
+      if (deg == null) return '';
+      return COMPASS[Math.round(deg / 22.5) % 16];
+    }
+
+    function formatUnixTime(unixSeconds) {
+      if (!unixSeconds) return '--:--';
+      return new Date(unixSeconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     async function updateWeather() {
       try {
         const wx = await api.get('/api/weather');
@@ -587,6 +634,25 @@
         } else {
           iconEl.style.display = 'none';
         }
+
+        document.getElementById('wx-temp').textContent = wx.temp + '°C';
+        document.getElementById('wx-desc').textContent = wx.description;
+        document.getElementById('wx-city').textContent = wx.city;
+
+        document.getElementById('wx-feels').textContent   = (wx.feels_like ?? '--') + '°C';
+        document.getElementById('wx-minmax').textContent  = `${wx.temp_min ?? '--'}° / ${wx.temp_max ?? '--'}°C`;
+        document.getElementById('wx-hum').textContent     = (wx.humidity ?? '--') + '%';
+        document.getElementById('wx-wind').textContent    = `${wx.wind_speed ?? '--'} m/s ${windDirection(wx.wind_deg)}`.trim();
+        document.getElementById('wx-pressure').textContent = (wx.pressure ?? '--') + ' hPa';
+        document.getElementById('wx-visibility').textContent = wx.visibility != null ? (wx.visibility / 1000).toFixed(1) + ' km' : '--';
+        document.getElementById('wx-clouds').textContent  = (wx.clouds ?? '--') + '%';
+        document.getElementById('wx-uv').textContent      = wx.uv_index != null ? wx.uv_index.toFixed(1) : 'N/A';
+        document.getElementById('wx-rain').textContent    = wx.rain_next24h + ' mm';
+        document.getElementById('wx-sunrise').textContent = formatUnixTime(wx.sunrise);
+        document.getElementById('wx-sunset').textContent  = formatUnixTime(wx.sunset);
+        document.getElementById('wx-updated').textContent = wx.fetched_at
+          ? 'Updated ' + formatDateShort(wx.fetched_at)
+          : '';
       } catch (err) { console.error('Weather update failed', err); }
     }
 
@@ -601,48 +667,15 @@
       }
     }
 
-    // ── Overview stat strip ──────────────────────────────────────────────
+    // ── Overview: Ambient stat card ───────────────────────────────────────
 
     function updateOverview() {
-      // Soil moisture — most recent reading overall
-      const latest = history[0];
-      if (latest) {
-        document.getElementById('stat-moisture').textContent = latest.moisture_pct + '%';
-        document.getElementById('stat-moisture-sub').textContent =
-          `${latest.plant_name || '#' + latest.plant_id} · ${formatDateShort(latest.recorded_at)}`;
-      }
-
-      // Indoor ambient (DHT22)
       const ambient = latestAmbientReading();
-      if (ambient) {
-        document.getElementById('stat-indoor').textContent = ambient.temperature.toFixed(1) + '°C';
-        document.getElementById('stat-indoor-sub').textContent =
-          `${ambient.humidity.toFixed(1)}% humidity · ${formatDateShort(ambient.recorded_at)}`;
-      }
-
-      // Outdoor weather
-      if (lastWeather) {
-        document.getElementById('stat-outdoor').textContent = lastWeather.temp + '°C';
-        document.getElementById('stat-outdoor-sub').textContent =
-          `${capitalize(lastWeather.description)} · ${lastWeather.humidity}% humidity`;
-      }
-
-      // Last AI decision
-      if (latest) {
-        let dec = {}; try { dec = JSON.parse(latest.ai_decision); } catch {}
-        const decisionEl = document.getElementById('stat-decision');
-        if (latest.watered) {
-          decisionEl.textContent = '✓ Watered';
-          decisionEl.style.color = 'var(--primary)';
-        } else {
-          decisionEl.textContent = 'Skipped';
-          decisionEl.style.color = 'var(--text)';
-        }
-        document.getElementById('stat-decision-sub').textContent = dec.reasoning || '---';
-      }
+      if (!ambient) return;
+      document.getElementById('stat-indoor').textContent = ambient.temperature.toFixed(1) + '°C';
+      document.getElementById('stat-indoor-sub').textContent =
+        `${ambient.humidity.toFixed(1)}% humidity · ${formatDateShort(ambient.recorded_at)}`;
     }
-
-    function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
     // ── Unified Trends chart (tabbed) ────────────────────────────────────
 
