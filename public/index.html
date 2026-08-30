@@ -344,10 +344,6 @@
             <div><div class="wx-stat-label">Cloud cover</div><div class="wx-stat-value" id="wx-clouds">--%</div></div>
           </div>
           <div class="wx-stat">
-            <i data-lucide="sun"></i>
-            <div><div class="wx-stat-label">UV Index</div><div class="wx-stat-value" id="wx-uv">--</div></div>
-          </div>
-          <div class="wx-stat">
             <i data-lucide="cloud-rain"></i>
             <div><div class="wx-stat-label">Rain 24h</div><div class="wx-stat-value" id="wx-rain">-- mm</div></div>
           </div>
@@ -646,7 +642,6 @@
         document.getElementById('wx-pressure').textContent = (wx.pressure ?? '--') + ' hPa';
         document.getElementById('wx-visibility').textContent = wx.visibility != null ? (wx.visibility / 1000).toFixed(1) + ' km' : '--';
         document.getElementById('wx-clouds').textContent  = (wx.clouds ?? '--') + '%';
-        document.getElementById('wx-uv').textContent      = wx.uv_index != null ? wx.uv_index.toFixed(1) : 'N/A';
         document.getElementById('wx-rain').textContent    = wx.rain_next24h + ' mm';
         document.getElementById('wx-sunrise').textContent = formatUnixTime(wx.sunrise);
         document.getElementById('wx-sunset').textContent  = formatUnixTime(wx.sunset);
@@ -764,18 +759,43 @@
     function buildWeatherChartConfig() {
       const points = [...weatherHistory].reverse(); // DESC -> chronological
 
+      // Rain forecast is mostly flat at 0mm most of the time in dry climates,
+      // so instead of pairing Temp with Rain (often an uninformative flat
+      // line), show Temp + Feels-like (°C, left) alongside Humidity (%,
+      // right) — three signals that actually vary and tell a story together.
+      // Rain forecast is still available as a filled area on the % axis so
+      // it doesn't disappear, just de-emphasized.
       return {
         type: 'line',
         data: {
           labels: points.map(w => formatDateLabel(w.recorded_at)),
           datasets: [
-            { label: 'Outdoor Temp (°C)',       data: points.map(w => w.temp),         borderColor: '#f0a742', borderWidth: 2, fill: false, yAxisID: 'y' },
-            { label: 'Rain forecast 24h (mm)',  data: points.map(w => w.rain_next24h), borderColor: '#38bdf8', borderWidth: 2, fill: false, yAxisID: 'y1' }
+            {
+              label: 'Temperature (°C)',
+              data: points.map(w => w.temp),
+              borderColor: '#f0a742', borderWidth: 2, fill: false, yAxisID: 'y'
+            },
+            {
+              label: 'Feels like (°C)',
+              data: points.map(w => w.feels_like),
+              borderColor: '#c98a4b', borderWidth: 2, borderDash: [5, 4], fill: false, yAxisID: 'y', pointRadius: 0
+            },
+            {
+              label: 'Humidity (%)',
+              data: points.map(w => w.humidity),
+              borderColor: '#38bdf8', borderWidth: 2, fill: false, yAxisID: 'y1'
+            },
+            {
+              label: 'Rain forecast 24h (mm)',
+              data: points.map(w => w.rain_next24h),
+              borderColor: 'rgba(56, 189, 248, 0.35)', backgroundColor: 'rgba(56, 189, 248, 0.12)',
+              borderWidth: 1, fill: true, yAxisID: 'y1', pointRadius: 0
+            }
           ]
         },
         options: baseChartOptions({
           y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { color: 'rgba(45, 64, 50, 0.35)' } },
-          y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { display: false }, min: 0 }
+          y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#6b7d70' }, ticks: { color: '#6b7d70' }, grid: { display: false }, min: 0, max: 100 }
         })
       };
     }
