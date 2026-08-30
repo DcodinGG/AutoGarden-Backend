@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoGarden — Smart Irrigation</title>
-  
+
   <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
@@ -23,6 +23,7 @@
       --text-muted: #94a3b8;
       --danger: #ef4444;
       --warning: #f59e0b;
+      --info: #3b82f6;
       --font-ui: 'Inter', sans-serif;
       --font-heading: 'Fraunces', serif;
     }
@@ -55,6 +56,7 @@
       padding: 1rem 2rem;
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 100;
+      flex-wrap: wrap; gap: 0.75rem;
     }
 
     .logo {
@@ -67,27 +69,68 @@
     .logo span { color: var(--primary); }
     .logo i { color: var(--primary); }
 
-    .status-group {
-      display: flex; gap: 1.5rem;
-      font-size: 0.75rem; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.05em;
+    .status-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pill {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.35rem 0.7rem; border-radius: 999px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.03em;
+      color: var(--text-muted);
     }
-    .status-item { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
-    .dot.active { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
-    .dot.warn { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
-    .dot.error { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: all 0.3s; flex-shrink:0; }
+    .dot.active { background: var(--primary); box-shadow: 0 0 6px var(--primary); }
+    .dot.warn { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+    .dot.error { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
 
     /* ── Layout ── */
     main {
       max-width: 1200px; margin: 0 auto;
       padding: 2rem;
-      display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem;
+      display: flex; flex-direction: column; gap: 1.5rem;
     }
 
+    .grid-12 { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; }
     .col-span-12 { grid-column: span 12; }
     .col-span-8 { grid-column: span 8; }
     .col-span-4 { grid-column: span 4; }
+
+    /* ── Overview stat strip ── */
+    .stat-strip {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.4rem;
+      position: relative;
+    }
+    .stat-card .stat-icon-row { display:flex; align-items:center; justify-content:space-between; }
+    .stat-card .stat-icon {
+      width: 34px; height: 34px; border-radius: 0.6rem;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(16, 185, 129, 0.12); color: var(--primary);
+    }
+    .stat-card .stat-icon i { width: 18px; height: 18px; }
+    .stat-card .stat-label {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--text-muted);
+    }
+    .stat-card .stat-value {
+      font-family: var(--font-heading); font-size: 1.75rem; font-weight: 700;
+      display:flex; align-items:baseline; gap: 0.4rem;
+    }
+    .stat-card .stat-value img { width: 30px; height: 30px; }
+    .stat-card .stat-sub { font-size: 0.75rem; color: var(--text-muted); }
+    .stat-card .stat-refresh {
+      position: absolute; top: 0.9rem; right: 0.9rem;
+      background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; padding: 0.2rem; border-radius: 0.3rem; transition: color 0.2s;
+    }
+    .stat-card .stat-refresh:hover { color: var(--primary); }
+    .stat-card .stat-refresh i { width: 14px; height: 14px; }
 
     /* ── Components ── */
     .card {
@@ -101,9 +144,26 @@
     .card-title {
       font-family: var(--font-heading);
       font-size: 1.25rem; font-weight: 700;
-      margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;
+      display: flex; align-items: center; gap: 0.75rem;
     }
     .card-title i { color: var(--primary); width: 20px; }
+    .card-header-row {
+      display:flex; justify-content:space-between; align-items:center;
+      flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+
+    /* ── Trend tabs ── */
+    .tabs { display: flex; gap: 0.4rem; background: rgba(255,255,255,0.03); padding: 0.3rem; border-radius: 0.65rem; border: 1px solid var(--border); }
+    .tab-btn {
+      padding: 0.45rem 0.9rem; border-radius: 0.5rem; border: none;
+      background: transparent; color: var(--text-muted);
+      font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .tab-btn i { width: 14px; height: 14px; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { background: var(--primary); color: #000; }
 
     /* ── Plants Grid ── */
     .plants-grid {
@@ -185,10 +245,15 @@
     input:focus, textarea:focus { border-color: var(--primary); }
 
     /* ── Analytics ── */
-    .chart-container { height: 300px; margin-top: 1rem; }
+    .chart-container { height: 320px; margin-top: 0.5rem; }
 
     @media (max-width: 1024px) {
       .col-span-8, .col-span-4 { grid-column: span 12; }
+      .stat-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .stat-strip { grid-template-columns: 1fr; }
+      main { padding: 1rem; }
     }
   </style>
 </head>
@@ -200,99 +265,85 @@
       Auto<span>Garden</span>
     </div>
     <div class="status-group">
-      <div class="status-item"><div id="dot-mqtt" class="dot"></div> MQTT</div>
-      <div class="status-item"><div id="dot-ai" class="dot"></div> <span id="ai-name">AI</span></div>
-      <div class="status-item"><div id="dot-wx" class="dot"></div> Weather</div>
-      <div class="status-item" id="uptime" style="color: var(--text); opacity: 0.8;">--:--</div>
+      <div class="pill"><div id="dot-mqtt" class="dot"></div> MQTT</div>
+      <div class="pill"><div id="dot-ai" class="dot"></div> <span id="ai-name">AI</span></div>
+      <div class="pill"><div id="dot-wx" class="dot"></div> Weather</div>
+      <div class="pill" id="uptime"><i data-lucide="clock" style="width:12px;height:12px;"></i> --:--</div>
     </div>
   </header>
 
   <main>
-    <!-- Moisture Analytics -->
-    <div class="card col-span-8">
-      <div class="card-title"><i data-lucide="line-chart"></i> Moisture Trends</div>
-      <div class="chart-container">
-        <canvas id="moistureChart"></canvas>
-      </div>
-    </div>
 
-    <!-- Weather Stats -->
-    <div class="card col-span-4" id="weather-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-        <div class="card-title" style="margin-bottom:0;"><i data-lucide="cloud-sun"></i> Local Weather</div>
-        <button class="btn btn-outline btn-sm" id="btn-refresh-wx" onclick="refreshWeather()">
-          <i data-lucide="refresh-cw"></i>
-        </button>
-      </div>
-      <div id="weather-info" style="display:flex; flex-direction:column; gap:1rem;">
-        <div style="display:flex; align-items:center; gap:0.75rem;">
-          <img id="wx-icon" src="" alt="" style="width:56px; height:56px; display:none;">
-          <div>
-            <div style="font-size: 2rem; font-weight: 700; font-family: var(--font-heading); line-height:1;" id="wx-temp">--°C</div>
-            <div id="wx-desc" style="color: var(--text-muted); text-transform: capitalize; font-size:0.85rem;">--</div>
-          </div>
+    <!-- ── Overview: at-a-glance stat strip ─────────────────────────── -->
+    <div class="stat-strip">
+      <div class="stat-card">
+        <div class="stat-icon-row">
+          <div class="stat-icon"><i data-lucide="droplets"></i></div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">FEELS LIKE</div>
-            <div id="wx-feels">--°C</div>
-          </div>
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">HUMIDITY</div>
-            <div id="wx-hum">--%</div>
-          </div>
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">RAIN 24H</div>
-            <div id="wx-rain">-- mm</div>
-          </div>
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">WIND</div>
-            <div id="wx-wind">-- m/s</div>
-          </div>
+        <div class="stat-label">Soil Moisture</div>
+        <div class="stat-value" id="stat-moisture">--%</div>
+        <div class="stat-sub" id="stat-moisture-sub">No data yet</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-row">
+          <div class="stat-icon"><i data-lucide="thermometer"></i></div>
         </div>
-        <div id="wx-updated" style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">--</div>
+        <div class="stat-label">Indoor (DHT22)</div>
+        <div class="stat-value" id="stat-indoor">--°C</div>
+        <div class="stat-sub" id="stat-indoor-sub">No data yet</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-row">
+          <div class="stat-icon"><i data-lucide="cloud-sun"></i></div>
+          <button class="stat-refresh" id="btn-refresh-wx" onclick="refreshWeather()" title="Refresh weather">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+        <div class="stat-label">Outdoor Weather</div>
+        <div class="stat-value">
+          <img id="wx-icon" src="" alt="" style="display:none;">
+          <span id="stat-outdoor">--°C</span>
+        </div>
+        <div class="stat-sub" id="stat-outdoor-sub">--</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-row">
+          <div class="stat-icon"><i data-lucide="brain-circuit"></i></div>
+        </div>
+        <div class="stat-label">Last AI Decision</div>
+        <div class="stat-value" id="stat-decision" style="font-size:1.2rem;">--</div>
+        <div class="stat-sub" id="stat-decision-sub">No data yet</div>
       </div>
     </div>
 
-    <!-- Weather Trends (historial independiente, cada 30 min) -->
-    <div class="card col-span-12">
-      <div class="card-title"><i data-lucide="cloud-rain"></i> Weather Trends</div>
-      <div class="chart-container">
-        <canvas id="weatherChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Ambient Sensor Trends (DHT22) -->
-    <div class="card col-span-8">
-      <div class="card-title"><i data-lucide="thermometer"></i> Ambient Sensor Trends (DHT22)</div>
-      <div class="chart-container">
-        <canvas id="ambientChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Ambient Sensor Now -->
-    <div class="card col-span-4" id="ambient-card">
-      <div class="card-title"><i data-lucide="gauge"></i> Ambient Now</div>
-      <div style="display:flex; flex-direction:column; gap:1rem;">
-        <div style="font-size: 2rem; font-weight: 700; font-family: var(--font-heading);" id="dht-temp">--°C</div>
-        <div id="dht-updated" style="color: var(--text-muted);">No data yet</div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">HUMIDITY</div>
-            <div id="dht-hum">--%</div>
-          </div>
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">SOURCE</div>
-            <div id="dht-source">--</div>
-          </div>
+    <!-- ── Unified Trends chart with tab switcher ───────────────────── -->
+    <div class="card">
+      <div class="card-header-row">
+        <div class="card-title"><i data-lucide="line-chart"></i> Trends</div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="moisture" onclick="setActiveTrend('moisture')">
+            <i data-lucide="droplets"></i> Soil Moisture
+          </button>
+          <button class="tab-btn" data-tab="ambient" onclick="setActiveTrend('ambient')">
+            <i data-lucide="thermometer"></i> Ambient
+          </button>
+          <button class="tab-btn" data-tab="weather" onclick="setActiveTrend('weather')">
+            <i data-lucide="cloud-rain"></i> Weather
+          </button>
         </div>
       </div>
+      <div class="chart-container">
+        <canvas id="trendsChart"></canvas>
+      </div>
     </div>
 
-    <!-- Plants Control -->
-    <div class="card col-span-12">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
-        <div class="card-title" style="margin-bottom:0;"><i data-lucide="layout-grid"></i> Configured Pots</div>
+    <!-- ── Plants Control ────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header-row">
+        <div class="card-title"><i data-lucide="layout-grid"></i> Configured Pots</div>
         <button class="btn btn-primary" onclick="openAddModal()">
           <i data-lucide="plus"></i> Add New Pot
         </button>
@@ -302,10 +353,10 @@
       </div>
     </div>
 
-    <!-- Recent History -->
-    <div class="card col-span-12">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-        <div class="card-title" style="margin-bottom:0;"><i data-lucide="history"></i> Decision History</div>
+    <!-- ── Decision History ──────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header-row">
+        <div class="card-title"><i data-lucide="history"></i> Decision History</div>
         <button class="btn btn-outline btn-sm" onclick="loadHistory()">
           <i data-lucide="refresh-cw"></i> Refresh
         </button>
@@ -328,6 +379,7 @@
         </table>
       </div>
     </div>
+
   </main>
 
   <!-- Modal -->
@@ -370,22 +422,24 @@
     let plants = [];
     let history = [];
     let weatherHistory = [];
-    let chart = null;
-    let ambientChart = null;
-    let weatherChart = null;
+    let lastWeather = null;
+    let editingId = null;
+
+    let trendsChart = null;
+    let activeTrend = 'moisture'; // 'moisture' | 'ambient' | 'weather'
 
     document.addEventListener('DOMContentLoaded', async () => {
-      initChart();
-      initAmbientChart();
-      initWeatherChart();
       await loadStatus();
       await loadPlants();
       await loadHistory();
       await loadWeatherHistory();
+      renderTrendsChart();
       setInterval(loadHistory, 30000);
       setInterval(loadStatus, 15000);
       setInterval(loadWeatherHistory, 60000);
     });
+
+    // ── Status header ──────────────────────────────────────────────────
 
     async function loadStatus() {
       try {
@@ -394,7 +448,7 @@
         setDot('dot-ai',   s.ai_configured);
         setDot('dot-wx',   s.weather_configured);
         document.getElementById('ai-name').textContent = (s.ai_engine || 'AI') + ' Engine';
-        document.getElementById('uptime').innerHTML = `<i data-lucide="clock" style="width:12px; height:12px; vertical-align:middle; margin-right:4px;"></i> ${formatUptime(s.uptime_s)}`;
+        document.getElementById('uptime').innerHTML = `<i data-lucide="clock" style="width:12px; height:12px; vertical-align:middle;"></i> ${formatUptime(s.uptime_s)}`;
         lucide.createIcons();
       } catch { setDot('dot-mqtt', false, true); }
     }
@@ -409,6 +463,8 @@
       if (s < 3600) return `${Math.floor(s/60)}m`;
       return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
     }
+
+    // ── Plants ────────────────────────────────────────────────────────
 
     async function loadPlants() {
       plants = await api.get('/api/plants');
@@ -429,7 +485,7 @@
         const last = lastByPlant[p.id];
         const moisture = last?.moisture_pct ?? 0;
         const watered = last?.watered;
-        
+
         return `
           <div class="plant-item" onclick="openEditModal(${p.id})">
             <div class="plant-header">
@@ -442,7 +498,7 @@
             </div>
             <div class="plant-name">${p.name}</div>
             <div class="plant-species">${p.species || 'Common species'}</div>
-            
+
             <div class="moisture-viz">
               <div class="progress-track"><div class="progress-fill" style="width:${moisture}%"></div></div>
               <span class="moisture-pct">${moisture}%</span>
@@ -459,19 +515,14 @@
       lucide.createIcons();
     }
 
+    // ── Sensor / decision history ────────────────────────────────────────
+
     async function loadHistory() {
       history = await api.get('/api/history?limit=50');
       renderHistory();
       renderPlants();
-      updateChart();
-      updateAmbientNow();
-      updateAmbientChart();
-    }
-
-    async function loadWeatherHistory() {
-      weatherHistory = await api.get('/api/weather/history?limit=100');
-      await updateWeather();
-      updateWeatherChart();
+      updateOverview();
+      if (activeTrend === 'moisture' || activeTrend === 'ambient') renderTrendsChart();
     }
 
     function renderHistory() {
@@ -497,25 +548,31 @@
       }).join('');
     }
 
+    // Latest history entry that actually carries a valid DHT22 reading
+    function latestAmbientReading() {
+      return history.find(h => h.temperature != null && h.humidity != null);
+    }
+
+    // ── Weather ───────────────────────────────────────────────────────
+
+    async function loadWeatherHistory() {
+      weatherHistory = await api.get('/api/weather/history?limit=100');
+      await updateWeather();
+      updateOverview();
+      if (activeTrend === 'weather') renderTrendsChart();
+    }
+
     async function updateWeather() {
       try {
         const wx = await api.get('/api/weather');
         if (wx.error) return;
-        document.getElementById('wx-temp').textContent  = wx.temp + '°C';
-        document.getElementById('wx-desc').textContent  = wx.description;
-        document.getElementById('wx-rain').textContent  = wx.rain_next24h + ' mm';
-        document.getElementById('wx-hum').textContent   = (wx.humidity ?? '--') + '%';
-        document.getElementById('wx-feels').textContent = (wx.feels_like ?? '--') + '°C';
-        document.getElementById('wx-wind').textContent  = (wx.wind_speed ?? '--') + ' m/s';
-        document.getElementById('wx-updated').textContent = wx.fetched_at
-          ? 'Updated ' + formatDateShort(wx.fetched_at)
-          : '';
+        lastWeather = wx;
 
         const iconEl = document.getElementById('wx-icon');
         if (wx.icon) {
           iconEl.src = `https://openweathermap.org/img/wn/${wx.icon}@2x.png`;
           iconEl.alt = wx.description || '';
-          iconEl.style.display = 'block';
+          iconEl.style.display = 'inline-block';
         } else {
           iconEl.style.display = 'none';
         }
@@ -533,104 +590,108 @@
       }
     }
 
-    // ── Weather Trends chart (histórico independiente, cada 30 min) ────────
+    // ── Overview stat strip ──────────────────────────────────────────────
 
-    function initWeatherChart() {
-      const ctx = document.getElementById('weatherChart').getContext('2d');
-      weatherChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
-          scales: {
-            x:  { ticks: { color: '#64748b' }, grid: { display: false } },
-            y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
-            y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0 }
-          },
-          elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
-        }
-      });
-    }
-
-    function updateWeatherChart() {
-      if (!weatherChart) return;
-
-      // weatherHistory comes DESC (most recent first) — reverse for the chart
-      const points = [...weatherHistory].reverse();
-      const labels = points.map(w => formatDateLabel(w.recorded_at));
-
-      weatherChart.data.labels = labels;
-      weatherChart.data.datasets = [
-        {
-          label: 'Outdoor Temp (°C)',
-          data: points.map(w => w.temp),
-          borderColor: '#f59e0b',
-          borderWidth: 2,
-          fill: false,
-          yAxisID: 'y'
-        },
-        {
-          label: 'Rain forecast 24h (mm)',
-          data: points.map(w => w.rain_next24h),
-          borderColor: '#3b82f6',
-          borderWidth: 2,
-          fill: false,
-          yAxisID: 'y1'
-        }
-      ];
-      weatherChart.update('none');
-    }
-
-    // ── Ambient sensor (DHT22) ──────────────────────────────────────────
-
-    // Latest history entry that actually carries a valid DHT22 reading
-    function latestAmbientReading() {
-      return history.find(h => h.temperature != null && h.humidity != null);
-    }
-
-    function updateAmbientNow() {
-      const reading = latestAmbientReading();
-      if (!reading) {
-        document.getElementById('dht-temp').textContent     = '--°C';
-        document.getElementById('dht-hum').textContent      = '--%';
-        document.getElementById('dht-updated').textContent  = 'No data yet';
-        document.getElementById('dht-source').textContent   = '--';
-        return;
+    function updateOverview() {
+      // Soil moisture — most recent reading overall
+      const latest = history[0];
+      if (latest) {
+        document.getElementById('stat-moisture').textContent = latest.moisture_pct + '%';
+        document.getElementById('stat-moisture-sub').textContent =
+          `${latest.plant_name || '#' + latest.plant_id} · ${formatDateShort(latest.recorded_at)}`;
       }
 
-      document.getElementById('dht-temp').textContent    = reading.temperature.toFixed(1) + '°C';
-      document.getElementById('dht-hum').textContent      = reading.humidity.toFixed(1) + '%';
-      document.getElementById('dht-updated').textContent = 'Last: ' + formatDateShort(reading.recorded_at);
-      document.getElementById('dht-source').textContent  = reading.plant_name || ('#' + reading.plant_id);
-    }
+      // Indoor ambient (DHT22)
+      const ambient = latestAmbientReading();
+      if (ambient) {
+        document.getElementById('stat-indoor').textContent = ambient.temperature.toFixed(1) + '°C';
+        document.getElementById('stat-indoor-sub').textContent =
+          `${ambient.humidity.toFixed(1)}% humidity · ${formatDateShort(ambient.recorded_at)}`;
+      }
 
-    function initAmbientChart() {
-      const ctx = document.getElementById('ambientChart').getContext('2d');
-      ambientChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
-          scales: {
-            x:  { ticks: { color: '#64748b' }, grid: { display: false } },
-            y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
-            y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0, max: 100 }
-          },
-          // radius > 0 para que un único punto de datos sea visible
-          elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
+      // Outdoor weather
+      if (lastWeather) {
+        document.getElementById('stat-outdoor').textContent = lastWeather.temp + '°C';
+        document.getElementById('stat-outdoor-sub').textContent =
+          `${capitalize(lastWeather.description)} · ${lastWeather.humidity}% humidity`;
+      }
+
+      // Last AI decision
+      if (latest) {
+        let dec = {}; try { dec = JSON.parse(latest.ai_decision); } catch {}
+        const decisionEl = document.getElementById('stat-decision');
+        if (latest.watered) {
+          decisionEl.textContent = '✓ Watered';
+          decisionEl.style.color = 'var(--primary)';
+        } else {
+          decisionEl.textContent = 'Skipped';
+          decisionEl.style.color = 'var(--text)';
         }
-      });
+        document.getElementById('stat-decision-sub').textContent = dec.reasoning || '---';
+      }
     }
 
-    function updateAmbientChart() {
-      if (!ambientChart) return;
+    function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
-      // One point per timestamp (ambient reading is the same across plants
-      // in a single ESP32 publish cycle, so we dedupe by recorded_at).
+    // ── Unified Trends chart (tabbed) ────────────────────────────────────
+
+    function setActiveTrend(tab) {
+      activeTrend = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      renderTrendsChart();
+    }
+
+    function baseChartOptions(extraScales) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
+        scales: Object.assign({
+          x: { ticks: { color: '#64748b' }, grid: { display: false } }
+        }, extraScales),
+        elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
+      };
+    }
+
+    function renderTrendsChart() {
+      const ctx = document.getElementById('trendsChart').getContext('2d');
+      if (trendsChart) { trendsChart.destroy(); trendsChart = null; }
+
+      let config;
+      if (activeTrend === 'moisture')      config = buildMoistureChartConfig();
+      else if (activeTrend === 'ambient')  config = buildAmbientChartConfig();
+      else                                  config = buildWeatherChartConfig();
+
+      trendsChart = new Chart(ctx, config);
+    }
+
+    function buildMoistureChartConfig() {
+      const labels = [...new Set(history.map(h => formatDateLabel(h.recorded_at)))].reverse();
+      const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+      const datasets = plants.map((p, i) => {
+        const plantHistory = history.filter(h => h.plant_id === p.id).reverse();
+        const data = labels.map(l => {
+          const entry = plantHistory.find(h => formatDateLabel(h.recorded_at) === l);
+          return entry ? entry.moisture_pct : null;
+        });
+        return { label: p.name, data, borderColor: colors[i % colors.length], borderWidth: 2, fill: false };
+      });
+
+      return {
+        type: 'line',
+        data: { labels, datasets },
+        options: baseChartOptions({
+          y: { min: 0, max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+        })
+      };
+    }
+
+    function buildAmbientChartConfig() {
+      // One point per timestamp (ambient reading repeats across plants in
+      // a single ESP32 publish cycle, so dedupe by recorded_at).
       const seen = new Set();
       const points = [];
       [...history].reverse().forEach(h => {
@@ -640,29 +701,42 @@
         points.push(h);
       });
 
-      const labels = points.map(h => formatDateLabel(h.recorded_at));
-
-      ambientChart.data.labels = labels;
-      ambientChart.data.datasets = [
-        {
-          label: 'Temperature (°C)',
-          data: points.map(h => h.temperature),
-          borderColor: '#f59e0b',
-          borderWidth: 2,
-          fill: false,
-          yAxisID: 'y'
+      return {
+        type: 'line',
+        data: {
+          labels: points.map(h => formatDateLabel(h.recorded_at)),
+          datasets: [
+            { label: 'Temperature (°C)', data: points.map(h => h.temperature), borderColor: '#f59e0b', borderWidth: 2, fill: false, yAxisID: 'y' },
+            { label: 'Humidity (%)',     data: points.map(h => h.humidity),    borderColor: '#3b82f6', borderWidth: 2, fill: false, yAxisID: 'y1' }
+          ]
         },
-        {
-          label: 'Humidity (%)',
-          data: points.map(h => h.humidity),
-          borderColor: '#3b82f6',
-          borderWidth: 2,
-          fill: false,
-          yAxisID: 'y1'
-        }
-      ];
-      ambientChart.update('none');
+        options: baseChartOptions({
+          y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0, max: 100 }
+        })
+      };
     }
+
+    function buildWeatherChartConfig() {
+      const points = [...weatherHistory].reverse(); // DESC -> chronological
+
+      return {
+        type: 'line',
+        data: {
+          labels: points.map(w => formatDateLabel(w.recorded_at)),
+          datasets: [
+            { label: 'Outdoor Temp (°C)',       data: points.map(w => w.temp),         borderColor: '#f59e0b', borderWidth: 2, fill: false, yAxisID: 'y' },
+            { label: 'Rain forecast 24h (mm)',  data: points.map(w => w.rain_next24h), borderColor: '#3b82f6', borderWidth: 2, fill: false, yAxisID: 'y1' }
+          ]
+        },
+        options: baseChartOptions({
+          y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0 }
+        })
+      };
+    }
+
+    // ── Plant modal ───────────────────────────────────────────────────────
 
     function openAddModal() {
       editingId = null;
@@ -707,50 +781,7 @@
       loadPlants();
     }
 
-    function initChart() {
-      const ctx = document.getElementById('moistureChart').getContext('2d');
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
-          scales: {
-            x: { ticks: { color: '#64748b' }, grid: { display: false } },
-            y: { min: 0, max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
-          },
-          // radius > 0 para que un único punto de datos (ej. recién instalado)
-          // sea visible aunque todavía no haya suficientes puntos para una línea
-          elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
-        }
-      });
-    }
-
-    function updateChart() {
-      if (!chart) return;
-      const dataByPlant = {};
-      const labels = [...new Set(history.map(h => formatDateLabel(h.recorded_at)))].reverse();
-      
-      plants.forEach((p, i) => {
-        const plantHistory = history.filter(h => h.plant_id === p.id).reverse();
-        dataByPlant[p.id] = labels.map(l => {
-          const entry = plantHistory.find(h => formatDateLabel(h.recorded_at) === l);
-          return entry ? entry.moisture_pct : null;
-        });
-      });
-
-      const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
-      chart.data.labels = labels;
-      chart.data.datasets = plants.map((p, i) => ({
-        label: p.name,
-        data: dataByPlant[p.id],
-        borderColor: colors[i % colors.length],
-        borderWidth: 2,
-        fill: false
-      }));
-      chart.update('none');
-    }
+    // ── Helpers ───────────────────────────────────────────────────────────
 
     function formatDateShort(iso) {
       const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
