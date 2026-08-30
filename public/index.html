@@ -240,6 +240,33 @@
       </div>
     </div>
 
+    <!-- Ambient Sensor Trends (DHT22) -->
+    <div class="card col-span-8">
+      <div class="card-title"><i data-lucide="thermometer"></i> Ambient Sensor Trends (DHT22)</div>
+      <div class="chart-container">
+        <canvas id="ambientChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Ambient Sensor Now -->
+    <div class="card col-span-4" id="ambient-card">
+      <div class="card-title"><i data-lucide="gauge"></i> Ambient Now</div>
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div style="font-size: 2rem; font-weight: 700; font-family: var(--font-heading);" id="dht-temp">--°C</div>
+        <div id="dht-updated" style="color: var(--text-muted);">No data yet</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">HUMIDITY</div>
+            <div id="dht-hum">--%</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">SOURCE</div>
+            <div id="dht-source">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Plants Control -->
     <div class="card col-span-12">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
@@ -321,12 +348,14 @@
     let plants = [];
     let history = [];
     let chart = null;
+    let ambientChart = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
       await loadStatus();
       await loadPlants();
       await loadHistory();
       initChart();
+      initAmbientChart();
       setInterval(loadHistory, 30000);
       setInterval(loadStatus, 15000);
     });
@@ -409,6 +438,8 @@
       renderPlants();
       updateChart();
       updateWeather();
+      updateAmbientNow();
+      updateAmbientChart();
     }
 
     function renderHistory() {
@@ -454,6 +485,86 @@
       } finally {
         btn.style.animation = '';
       }
+    }
+
+    // ── Ambient sensor (DHT22) ──────────────────────────────────────────
+
+    // Latest history entry that actually carries a valid DHT22 reading
+    function latestAmbientReading() {
+      return history.find(h => h.temperature != null && h.humidity != null);
+    }
+
+    function updateAmbientNow() {
+      const reading = latestAmbientReading();
+      if (!reading) {
+        document.getElementById('dht-temp').textContent     = '--°C';
+        document.getElementById('dht-hum').textContent      = '--%';
+        document.getElementById('dht-updated').textContent  = 'No data yet';
+        document.getElementById('dht-source').textContent   = '--';
+        return;
+      }
+
+      document.getElementById('dht-temp').textContent    = reading.temperature.toFixed(1) + '°C';
+      document.getElementById('dht-hum').textContent      = reading.humidity.toFixed(1) + '%';
+      document.getElementById('dht-updated').textContent = 'Last: ' + formatDateShort(reading.recorded_at);
+      document.getElementById('dht-source').textContent  = reading.plant_name || ('#' + reading.plant_id);
+    }
+
+    function initAmbientChart() {
+      const ctx = document.getElementById('ambientChart').getContext('2d');
+      ambientChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
+          scales: {
+            x:  { ticks: { color: '#64748b' }, grid: { display: false } },
+            y:  { type: 'linear', position: 'left',  title: { display: true, text: '°C', color: '#64748b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+            y1: { type: 'linear', position: 'right', title: { display: true, text: '%',  color: '#64748b' }, ticks: { color: '#64748b' }, grid: { display: false }, min: 0, max: 100 }
+          },
+          elements: { line: { tension: 0.4 }, point: { radius: 0 } }
+        }
+      });
+    }
+
+    function updateAmbientChart() {
+      if (!ambientChart) return;
+
+      // One point per timestamp (ambient reading is the same across plants
+      // in a single ESP32 publish cycle, so we dedupe by recorded_at).
+      const seen = new Set();
+      const points = [];
+      [...history].reverse().forEach(h => {
+        if (h.temperature == null || h.humidity == null) return;
+        if (seen.has(h.recorded_at)) return;
+        seen.add(h.recorded_at);
+        points.push(h);
+      });
+
+      const labels = points.map(h => formatDateLabel(h.recorded_at));
+
+      ambientChart.data.labels = labels;
+      ambientChart.data.datasets = [
+        {
+          label: 'Temperature (°C)',
+          data: points.map(h => h.temperature),
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          fill: false,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Humidity (%)',
+          data: points.map(h => h.humidity),
+          borderColor: '#3b82f6',
+          borderWidth: 2,
+          fill: false,
+          yAxisID: 'y1'
+        }
+      ];
+      ambientChart.update('none');
     }
 
     function openAddModal() {
