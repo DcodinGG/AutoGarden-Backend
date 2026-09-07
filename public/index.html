@@ -284,6 +284,8 @@
 
   <main>
 
+  <div id="view-dashboard" style="display:flex; flex-direction:column; gap:1.5rem;">
+
     <!-- ── Overview: Ambient + full Weather detail ──────────────────── -->
     <div class="grid-12">
       <!-- Ambient (DHT22) — compact -->
@@ -422,6 +424,80 @@
       </div>
     </div>
 
+  </div>
+  <!-- /view-dashboard -->
+
+  <!-- ── Plant detail page (#/plant/:id) ─────────────────────────────── -->
+  <div id="view-plant" style="display:none; flex-direction:column; gap:1.5rem;">
+
+    <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="location.hash=''">
+        <i data-lucide="arrow-left"></i> Back
+      </button>
+      <div>
+        <div class="card-title" id="pp-name" style="margin-bottom:0.15rem;">--</div>
+        <div style="color:var(--text-muted); font-style:italic; font-size:0.85rem;" id="pp-species"></div>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:0.5rem;">
+        <button class="btn btn-outline btn-sm" id="pp-edit-btn">
+          <i data-lucide="pencil"></i> Edit
+        </button>
+      </div>
+    </div>
+
+    <div class="grid-12">
+      <div class="stat-card col-span-4">
+        <div class="stat-label">Current Moisture</div>
+        <div class="stat-value" id="pp-moisture">--%</div>
+        <div class="stat-sub" id="pp-last-update">No data yet</div>
+      </div>
+      <div class="stat-card col-span-4">
+        <div class="stat-label">Last Watered</div>
+        <div class="stat-value" id="pp-last-watered" style="font-size:1.1rem;">Never</div>
+        <div class="stat-sub" id="pp-water-secs"></div>
+      </div>
+      <div class="stat-card col-span-4">
+        <div class="stat-label">Notes</div>
+        <div class="stat-sub" id="pp-notes" style="font-size:0.85rem; color:var(--text);">--</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <div class="card-title"><i data-lucide="droplets"></i> Full Moisture History</div>
+        <button class="btn btn-outline btn-sm" id="pp-refresh-btn">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+      <div class="chart-container">
+        <canvas id="plantHistoryChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <div class="card-title"><i data-lucide="history"></i> Complete Reading Log</div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Date &amp; Time</th>
+              <th>Moisture</th>
+              <th>Temp</th>
+              <th>Humidity</th>
+              <th>Status</th>
+              <th>AI Reasoning</th>
+            </tr>
+          </thead>
+          <tbody id="pp-history-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+  <!-- /view-plant -->
+
   </main>
 
   <!-- Modal -->
@@ -479,7 +555,43 @@
       setInterval(loadHistory, 30000);
       setInterval(loadStatus, 15000);
       setInterval(loadWeatherHistory, 60000);
+
+      document.getElementById('pp-edit-btn').addEventListener('click', () => {
+        if (currentPlantId != null) openEditModal(currentPlantId);
+      });
+      document.getElementById('pp-refresh-btn').addEventListener('click', () => {
+        if (currentPlantId != null) loadPlantPage(currentPlantId);
+      });
+
+      window.addEventListener('hashchange', route);
+      route();
     });
+
+    // ── Router (hash-based, single-page) ───────────────────────────────
+
+    let currentPlantId = null;
+
+    function route() {
+      const match = location.hash.match(/^#\/plant\/(\d+)/);
+      if (match) {
+        showPlantPage(parseInt(match[1], 10));
+      } else {
+        showDashboard();
+      }
+    }
+
+    function showDashboard() {
+      currentPlantId = null;
+      document.getElementById('view-dashboard').style.display = 'flex';
+      document.getElementById('view-plant').style.display = 'none';
+    }
+
+    async function showPlantPage(id) {
+      currentPlantId = id;
+      document.getElementById('view-dashboard').style.display = 'none';
+      document.getElementById('view-plant').style.display = 'flex';
+      await loadPlantPage(id);
+    }
 
     // ── Status header ──────────────────────────────────────────────────
 
@@ -529,10 +641,13 @@
         const watered = last?.watered;
 
         return `
-          <div class="plant-item" onclick="openEditModal(${p.id})">
+          <div class="plant-item" onclick="location.hash = '#/plant/${p.id}'">
             <div class="plant-header">
               <span class="plant-id">Pot #${p.id}</span>
               <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); openEditModal(${p.id})">
+                  <i data-lucide="pencil" style="width:14px;"></i>
+                </button>
                 <button class="btn btn-sm btn-outline btn-danger" onclick="event.stopPropagation(); deletePlantConfirm(${p.id})">
                   <i data-lucide="trash-2" style="width:14px;"></i>
                 </button>
@@ -800,6 +915,91 @@
       };
     }
 
+    // ── Plant detail page ────────────────────────────────────────────────
+
+    let plantHistoryChart = null;
+    let plantFullHistory = [];
+
+    async function loadPlantPage(id) {
+      if (!plants.length) await loadPlants();
+      const p = plants.find(x => x.id === id);
+
+      document.getElementById('pp-name').textContent = p ? p.name : `Pot #${id} (not configured)`;
+      document.getElementById('pp-species').textContent = p ? (p.species || '') : '';
+      document.getElementById('pp-notes').textContent = (p && p.notes) ? p.notes : '—';
+
+      plantFullHistory = await api.get(`/api/plants/${id}/history?limit=1000`);
+      // plantFullHistory comes DESC (newest first)
+
+      const last = plantFullHistory[0];
+      document.getElementById('pp-moisture').textContent = last ? last.moisture_pct + '%' : '--%';
+      document.getElementById('pp-last-update').textContent = last
+        ? 'Updated ' + formatDateShort(last.recorded_at)
+        : 'No data yet';
+
+      const lastWatered = plantFullHistory.find(h => h.watered);
+      document.getElementById('pp-last-watered').textContent = lastWatered
+        ? formatDateShort(lastWatered.recorded_at)
+        : 'Never';
+      document.getElementById('pp-water-secs').textContent = lastWatered
+        ? `Watered for ${lastWatered.water_secs}s`
+        : '';
+
+      renderPlantHistoryChart();
+      renderPlantHistoryTable();
+      lucide.createIcons();
+    }
+
+    function renderPlantHistoryChart() {
+      const canvas = document.getElementById('plantHistoryChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (plantHistoryChart) { plantHistoryChart.destroy(); plantHistoryChart = null; }
+
+      const points = [...plantFullHistory].reverse(); // chronological order
+
+      plantHistoryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: points.map(h => formatDateLabel(h.recorded_at)),
+          datasets: [{
+            label: 'Soil Moisture (%)',
+            data: points.map(h => h.moisture_pct),
+            borderColor: '#4ade80',
+            backgroundColor: 'rgba(74, 222, 128, 0.08)',
+            borderWidth: 2,
+            fill: true
+          }]
+        },
+        options: baseChartOptions({
+          y: { min: 0, max: 100, ticks: { color: '#6b7d70' }, grid: { color: 'rgba(45, 64, 50, 0.35)' } }
+        })
+      });
+    }
+
+    function renderPlantHistoryTable() {
+      const tbody = document.getElementById('pp-history-body');
+      if (plantFullHistory.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:2rem;">No readings recorded yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = plantFullHistory.map(h => {
+        let dec = {}; try { dec = JSON.parse(h.ai_decision); } catch {}
+        return `
+          <tr>
+            <td style="color:var(--text-muted)">${formatDateShort(h.recorded_at)}</td>
+            <td><span style="color: ${h.moisture_pct < 30 ? 'var(--danger)' : 'var(--primary)'}">${h.moisture_pct}%</span></td>
+            <td>${h.temperature != null ? h.temperature.toFixed(1) + '°C' : '--'}</td>
+            <td>${h.humidity != null ? h.humidity.toFixed(1) + '%' : '--'}</td>
+            <td>
+              ${h.watered ? `<span style="color:var(--primary); font-weight:700;">✓ Watered ${h.water_secs}s</span>` : '<span style="color:var(--text-muted)">Skipped</span>'}
+            </td>
+            <td style="font-size:0.75rem; max-width: 300px; color:var(--text-muted)">${dec.reasoning || '---'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     // ── Plant modal ───────────────────────────────────────────────────────
 
     function openAddModal() {
@@ -836,7 +1036,8 @@
       if (!id || !name) return alert('ID and Name are required');
       await api.put(`/api/plants/${id}`, { name, species, notes });
       closeModal();
-      loadPlants();
+      await loadPlants();
+      if (currentPlantId != null) loadPlantPage(currentPlantId);
     }
 
     async function deletePlantConfirm(id) {
@@ -847,13 +1048,22 @@
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
+    // Full date + time (not just time) — e.g. "07/09/26, 14:32"
     function formatDateShort(iso) {
       const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleString([], {
+        day: '2-digit', month: '2-digit', year: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
     }
+    // Compact date + time for chart axis labels — e.g. "07/09 14:32"
     function formatDateLabel(iso) {
       const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
-      return d.getHours() + ':' + (d.getMinutes()<10?'0':'') + d.getMinutes();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${day}/${month} ${hh}:${mm}`;
     }
   </script>
 </body>

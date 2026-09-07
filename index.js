@@ -7,7 +7,7 @@ require('dotenv').config();
 const express = require('express');
 const path    = require('path');
 const { connect: mqttConnect } = require('./mqtt');
-const { getPlants, getPlant, upsertPlant, deletePlant, getHistory,
+const { getPlants, getPlant, upsertPlant, deletePlant, getHistory, getPlantHistory,
         logWeatherSnapshot, getWeatherHistory } = require('./db');
 const { getWeather, clearWeatherCache } = require('./weather');
 
@@ -57,6 +57,14 @@ app.delete('/api/plants/:id', (req, res) => {
 app.get('/api/history', (req, res) => {
   const limit = parseInt(req.query.limit) || 50;
   res.json(getHistory(limit));
+});
+
+// GET /api/plants/:id/history?limit=1000 — full sensor/watering history for one plant
+app.get('/api/plants/:id/history', (req, res) => {
+  const id = parseInt(req.params.id);
+  const limit = parseInt(req.query.limit) || 1000;
+  if (!getPlant(id)) return res.status(404).json({ error: 'Plant not found' });
+  res.json(getPlantHistory(id, limit));
 });
 
 // GET /api/status — backend status
